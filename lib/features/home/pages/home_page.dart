@@ -37,7 +37,8 @@ class HomePage extends StatelessWidget {
               bottom: 12,
               child: Text(
                 'Environment: ${AppConfig.environment}\n'
-                'API: ${AppConfig.apiBaseUrl}',
+                'API: ${AppConfig.apiBaseUrl}\n'
+                'Frontend Version: ${AppConfig.frontendVersion}',
                 style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ),

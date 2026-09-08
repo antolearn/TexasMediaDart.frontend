@@ -4,6 +4,11 @@ class AppConfig {
     defaultValue: 'https://localhost:7001',
   );
 
+  static const String frontendVersion = String.fromEnvironment(
+    'FRONTEND_VERSION',
+    defaultValue: 'local',
+  );
+
   static const String environment = String.fromEnvironment(
     'ENVIRONMENT',
     defaultValue: 'local',
