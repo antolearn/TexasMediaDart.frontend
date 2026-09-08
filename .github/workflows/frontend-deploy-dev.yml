@@ -53,12 +53,10 @@ jobs:
       - name: Analyze Flutter code
         run: flutter analyze
 
-      - name: Build Flutter Web for Dev
+      - name: Build Flutter Web
         run: >
           flutter build web --release
-          --dart-define=ENVIRONMENT=dev
           --dart-define=FRONTEND_VERSION=${{ env.BUILD_VERSION }}
-          --dart-define=API_BASE_URL=https://texasmediadart-api-dev-hde5d3asftb5ahe4.eastus-01.azurewebsites.net
 
       - name: Create versioned frontend package
         shell: bash
@@ -109,6 +107,19 @@ jobs:
             -d deploy
 
           echo "Frontend package extracted."
+
+      - name: Create DEV runtime configuration
+        shell: bash
+        run: |
+          cat > deploy/config.json <<'EOF'
+          {
+            "environment": "dev",
+            "apiBaseUrl": "https://texasmediadart-api-dev-hde5d3asftb5ahe4.eastus-01.azurewebsites.net"
+          }
+          EOF
+
+          echo "DEV runtime configuration:"
+          cat deploy/config.json
 
       - name: Deploy to Azure Static Web Apps - Dev
         uses: Azure/static-web-apps-deploy@v1
