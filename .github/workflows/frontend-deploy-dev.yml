@@ -1,0 +1,49 @@
+name: Frontend Deploy - Dev
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Flutter Web to Dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter code
+        run: flutter analyze
+
+      - name: Build Flutter Web for Dev
+        run: >
+          flutter build web --release
+          --dart-define=ENVIRONMENT=dev
+          --dart-define=API_BASE_URL=https://texasmediadart-api-dev-hde5d3asftb5ahe4.eastus-01.azurewebsites.net
+
+      - name: Deploy to Azure Static Web Apps - Dev
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_THANKFUL_SMOKE_0F354AB0F }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: build/web
+          api_location: ""
+          output_location: ""
+          skip_app_build: true
