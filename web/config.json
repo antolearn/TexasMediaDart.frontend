@@ -1,4 +1,5 @@
 {
   "environment": "dev",
-  "apiBaseUrl": "https://texasmediadart-api-dev-hde5d3asftb5ahe4.eastus-01.azurewebsites.net"
+  "apiBaseUrl": "https://texasmediadart-api-dev-hde5d3asftb5ahe4.eastus-01.azurewebsites.net",
+  "identityApiBaseUrl": "https://texasmediadart-identity-api-dev-azfwayhme2fja4ce.westcentralus-01.azurewebsites.net"
 }
