@@ -99,7 +99,8 @@ jobs:
           cat > deploy/config.json <<'EOF'
           {
             "environment": "prod",
-            "apiBaseUrl": "https://texasmediadart-api-prod-b7gwdke4b6a2bjdg.eastus-01.azurewebsites.net"
+            "apiBaseUrl": "https://texasmediadart-api-prod-b7gwdke4b6a2bjdg.eastus-01.azurewebsites.net",
+            "identityApiBaseUrl": "https://texasmediadart-identity-api-prod-dbf6dscff4cah4cd.westus3-01.azurewebsites.net"
           }
           EOF
 
