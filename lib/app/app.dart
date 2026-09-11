@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../features/home/controllers/home_controller.dart';
-import '../features/home/pages/home_page.dart';
+import 'routes.dart';
 
 class TexasMediaDartApp extends StatelessWidget {
   const TexasMediaDartApp({super.key});
@@ -18,7 +18,8 @@ class TexasMediaDartApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'TexasMediaDart',
-        home: const HomePage(),
+        initialRoute: AppRoutes.startup,
+        onGenerateRoute: AppRoutes.generateRoute,
       ),
     );
   }
