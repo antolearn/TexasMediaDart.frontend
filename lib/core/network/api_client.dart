@@ -106,6 +106,66 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> put(
+    String endpoint, {
+    Object? body,
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    return _execute(
+      endpoint: endpoint,
+      authenticated: authenticated,
+      request: (uri, requestHeaders) {
+        return _client.put(
+          uri,
+          headers: requestHeaders,
+          body: body == null ? null : jsonEncode(body),
+        );
+      },
+      headers: headers,
+    );
+  }
+
+  Future<dynamic> patch(
+    String endpoint, {
+    Object? body,
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    return _execute(
+      endpoint: endpoint,
+      authenticated: authenticated,
+      request: (uri, requestHeaders) {
+        return _client.patch(
+          uri,
+          headers: requestHeaders,
+          body: body == null ? null : jsonEncode(body),
+        );
+      },
+      headers: headers,
+    );
+  }
+
+  Future<dynamic> delete(
+    String endpoint, {
+    Object? body,
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    return _execute(
+      endpoint: endpoint,
+      authenticated: authenticated,
+      request: (uri, requestHeaders) {
+        return _client.delete(
+          uri,
+          headers: requestHeaders,
+          body: body == null ? null : jsonEncode(body),
+        );
+      },
+      headers: headers,
+    );
+  }
+
   Future<dynamic> _execute({
     required String endpoint,
     required bool authenticated,
