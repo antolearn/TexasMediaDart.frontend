@@ -86,6 +86,26 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> post(
+    String endpoint, {
+    Object? body,
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    return _execute(
+      endpoint: endpoint,
+      authenticated: authenticated,
+      request: (uri, requestHeaders) {
+        return _client.post(
+          uri,
+          headers: requestHeaders,
+          body: body == null ? null : jsonEncode(body),
+        );
+      },
+      headers: headers,
+    );
+  }
+
   Future<dynamic> _execute({
     required String endpoint,
     required bool authenticated,

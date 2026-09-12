@@ -1,154 +1,144 @@
-import 'dart:convert';
+import '../../../core/config/app_config.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 
 import '../models/auth_tokens.dart';
 import '../models/register_response.dart';
 import '../models/user_profile.dart';
 
-import 'package:http/http.dart' as http;
-
-import '../../../core/config/app_config.dart';
-
 class IdentityApiService {
-  IdentityApiService({http.Client? client}) : _client = client ?? http.Client();
+  IdentityApiService({ApiClient? apiClient})
+    : _apiClient =
+          apiClient ?? ApiClient(baseUrl: AppConfig.identityApiBaseUrl);
 
-  final http.Client _client;
-
-  Uri _buildUri(String path) {
-    final baseUrl = AppConfig.identityApiBaseUrl;
-
-    return Uri.parse('$baseUrl$path');
-  }
+  final ApiClient _apiClient;
 
   Future<RegisterResponse> register({
     required String email,
     required String password,
     required String confirmPassword,
   }) async {
-    final response = await _client.post(
-      _buildUri('/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'confirmPassword': confirmPassword,
-      }),
-    );
+    try {
+      final response = await _apiClient.post(
+        '/api/auth/register',
+        body: {
+          'email': email,
+          'password': password,
+          'confirmPassword': confirmPassword,
+        },
+      );
 
-    final json = _handleResponse(response);
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message: 'Unexpected response format from registration endpoint.',
+        );
+      }
 
-    return RegisterResponse.fromJson(json);
+      return RegisterResponse.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
   }
 
   Future<AuthTokens> login({
     required String email,
     required String password,
   }) async {
-    final response = await _client.post(
-      _buildUri('/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    try {
+      final response = await _apiClient.post(
+        '/api/auth/login',
+        body: {'email': email, 'password': password},
+      );
 
-    final json = _handleResponse(response);
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message: 'Unexpected response format from login endpoint.',
+        );
+      }
 
-    return AuthTokens.fromJson(json);
+      return AuthTokens.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
   }
 
   Future<UserProfile> getMe({required String accessToken}) async {
-    final response = await http.get(
-      Uri.parse('${AppConfig.identityApiBaseUrl}/api/auth/me'),
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return UserProfile.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
+    try {
+      final response = await _apiClient.get(
+        '/api/auth/me',
+        headers: {'Authorization': 'Bearer $accessToken'},
       );
-    }
 
-    throw IdentityApiException(
-      statusCode: response.statusCode,
-      message: 'Unable to retrieve user profile.',
-    );
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message: 'Unexpected response format from /api/auth/me.',
+        );
+      }
+
+      return UserProfile.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
   }
 
   Future<AuthTokens> refreshToken({required String refreshToken}) async {
-    final response = await _client.post(
-      _buildUri('/api/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
+    try {
+      final response = await _apiClient.post(
+        '/api/auth/refresh',
+        body: {'refreshToken': refreshToken},
+      );
 
-    final json = _handleResponse(response);
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message: 'Unexpected response format from refresh endpoint.',
+        );
+      }
 
-    return AuthTokens.fromJson(json);
+      return AuthTokens.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
   }
 
   Future<void> logout({required String refreshToken}) async {
-    final response = await _client.post(
-      _buildUri('/api/auth/logout'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw IdentityApiException(
-        statusCode: response.statusCode,
-        message: _extractErrorMessage(response),
-      );
-    }
-  }
-
-  Map<String, dynamic> _handleResponse(http.Response response) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) {
-        return {};
-      }
-
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-
-    throw IdentityApiException(
-      statusCode: response.statusCode,
-      message: _extractErrorMessage(response),
-    );
-  }
-
-  String _extractErrorMessage(http.Response response) {
     try {
-      final json = jsonDecode(response.body);
-
-      if (json is Map<String, dynamic>) {
-        return json['message']?.toString() ??
-            json['detail']?.toString() ??
-            json['title']?.toString() ??
-            'Request failed.';
-      }
-    } catch (_) {
-      // Ignore invalid JSON and fall back below.
+      await _apiClient.post(
+        '/api/auth/logout',
+        body: {'refreshToken': refreshToken},
+      );
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
     }
+  }
 
-    return response.body.isNotEmpty
-        ? response.body
-        : 'Request failed with status ${response.statusCode}.';
+  IdentityApiException _toIdentityApiException(ApiException exception) {
+    return IdentityApiException(
+      statusCode: exception.statusCode,
+      message: exception.message,
+    );
   }
 
   void dispose() {
-    _client.close();
+    _apiClient.dispose();
   }
 }
 
 class IdentityApiException implements Exception {
   IdentityApiException({required this.statusCode, required this.message});
 
-  final int statusCode;
+  final int? statusCode;
   final String message;
 
   @override
   String toString() {
-    return 'IdentityApiException($statusCode): $message';
+    if (statusCode != null) {
+      return 'IdentityApiException($statusCode): $message';
+    }
+
+    return 'IdentityApiException: $message';
   }
 }
