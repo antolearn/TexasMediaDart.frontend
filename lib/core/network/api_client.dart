@@ -38,7 +38,7 @@ class ApiClient {
 
   Future<String?>? _refreshFuture;
 
-  Uri _buildUri(String endpoint, {Map<String, String>? queryParameters}) {
+  Uri _buildUri(String endpoint, {Map<String, Object?>? queryParameters}) {
     final normalizedBaseUrl = _baseUrl.endsWith('/')
         ? _baseUrl.substring(0, _baseUrl.length - 1)
         : _baseUrl;
@@ -53,9 +53,27 @@ class ApiClient {
       return uri;
     }
 
-    return uri.replace(
-      queryParameters: {...uri.queryParameters, ...queryParameters},
-    );
+    final normalizedQueryParameters = <String, String>{...uri.queryParameters};
+
+    for (final entry in queryParameters.entries) {
+      final value = entry.value;
+
+      if (value == null) {
+        continue;
+      }
+
+      normalizedQueryParameters[entry.key] = _queryParameterValue(value);
+    }
+
+    return uri.replace(queryParameters: normalizedQueryParameters);
+  }
+
+  String _queryParameterValue(Object value) {
+    if (value is DateTime) {
+      return value.toUtc().toIso8601String();
+    }
+
+    return value.toString();
   }
 
   Map<String, String> _defaultHeaders() {
@@ -82,7 +100,7 @@ class ApiClient {
   Future<dynamic> get(
     String endpoint, {
     Map<String, String>? headers,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
@@ -100,7 +118,7 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
@@ -122,7 +140,7 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
@@ -144,7 +162,7 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
@@ -166,7 +184,7 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
@@ -186,7 +204,7 @@ class ApiClient {
 
   Future<dynamic> _execute({
     required String endpoint,
-    Map<String, String>? queryParameters,
+    Map<String, Object?>? queryParameters,
     required bool authenticated,
     required Future<http.Response> Function(
       Uri uri,
