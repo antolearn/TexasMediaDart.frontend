@@ -13,6 +13,8 @@ class AuthService {
   final IdentityApiService _identityApiService;
   final SessionManager _sessionManager;
 
+  Future<AuthTokens>? _refreshFuture;
+
   Future<AuthTokens> login({
     required String email,
     required String password,
@@ -46,6 +48,7 @@ class AuthService {
 
     if (session.refreshTokenExpiresAtUtc.isBefore(DateTime.now().toUtc())) {
       await _sessionManager.clearSession();
+
       return false;
     }
 
@@ -68,6 +71,7 @@ class AuthService {
     } on IdentityApiException catch (ex) {
       if (ex.statusCode == 401) {
         await _sessionManager.clearSession();
+
         return false;
       }
 
@@ -98,6 +102,7 @@ class AuthService {
 
     if (session.refreshTokenExpiresAtUtc.isBefore(DateTime.now().toUtc())) {
       await _sessionManager.clearSession();
+
       return false;
     }
 
@@ -105,6 +110,26 @@ class AuthService {
   }
 
   Future<AuthTokens> refreshSession() async {
+    final existingRefresh = _refreshFuture;
+
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    final refreshFuture = _performRefreshSession();
+
+    _refreshFuture = refreshFuture;
+
+    try {
+      return await refreshFuture;
+    } finally {
+      if (identical(_refreshFuture, refreshFuture)) {
+        _refreshFuture = null;
+      }
+    }
+  }
+
+  Future<AuthTokens> _performRefreshSession() async {
     final session = await _sessionManager.getSession();
 
     if (session == null) {

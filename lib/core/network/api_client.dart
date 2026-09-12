@@ -5,17 +5,43 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'api_exception.dart';
 
-class ApiClient {
-  final http.Client _client;
+typedef AccessTokenProvider = Future<String?> Function();
+typedef AccessTokenRefresher = Future<String?> Function();
 
-  ApiClient({http.Client? client}) : _client = client ?? http.Client();
+class ApiClient {
+  factory ApiClient({
+    http.Client? client,
+    String? baseUrl,
+    AccessTokenProvider? accessTokenProvider,
+    AccessTokenRefresher? accessTokenRefresher,
+  }) {
+    return ApiClient._(
+      baseUrl ?? AppConfig.apiBaseUrl,
+      accessTokenProvider,
+      accessTokenRefresher,
+      client: client,
+    );
+  }
+
+  ApiClient._(
+    this._baseUrl,
+    this._accessTokenProvider,
+    this._accessTokenRefresher, {
+    http.Client? client,
+  }) : _client = client ?? http.Client();
+
+  final http.Client _client;
+  final String _baseUrl;
+
+  final AccessTokenProvider? _accessTokenProvider;
+  final AccessTokenRefresher? _accessTokenRefresher;
+
+  Future<String?>? _refreshFuture;
 
   Uri _buildUri(String endpoint) {
-    final baseUrl = AppConfig.apiBaseUrl;
-
-    final normalizedBaseUrl = baseUrl.endsWith('/')
-        ? baseUrl.substring(0, baseUrl.length - 1)
-        : baseUrl;
+    final normalizedBaseUrl = _baseUrl.endsWith('/')
+        ? _baseUrl.substring(0, _baseUrl.length - 1)
+        : _baseUrl;
 
     final normalizedEndpoint = endpoint.startsWith('/')
         ? endpoint
@@ -28,20 +54,102 @@ class ApiClient {
     return {'Accept': 'application/json', 'Content-Type': 'application/json'};
   }
 
-  Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
+  Future<Map<String, String>> _buildHeaders({
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    final result = {..._defaultHeaders(), ...?headers};
+
+    if (authenticated && _accessTokenProvider != null) {
+      final accessToken = await _accessTokenProvider();
+
+      if (accessToken != null && accessToken.isNotEmpty) {
+        result['Authorization'] = 'Bearer $accessToken';
+      }
+    }
+
+    return result;
+  }
+
+  Future<dynamic> get(
+    String endpoint, {
+    Map<String, String>? headers,
+    bool authenticated = false,
+  }) async {
+    return _execute(
+      endpoint: endpoint,
+      authenticated: authenticated,
+      request: (uri, requestHeaders) {
+        return _client.get(uri, headers: requestHeaders);
+      },
+      headers: headers,
+    );
+  }
+
+  Future<dynamic> _execute({
+    required String endpoint,
+    required bool authenticated,
+    required Future<http.Response> Function(
+      Uri uri,
+      Map<String, String> headers,
+    )
+    request,
+    Map<String, String>? headers,
+  }) async {
     final uri = _buildUri(endpoint);
 
     try {
-      final response = await _client.get(
-        uri,
-        headers: {..._defaultHeaders(), ...?headers},
+      var requestHeaders = await _buildHeaders(
+        headers: headers,
+        authenticated: authenticated,
       );
+
+      var response = await request(uri, requestHeaders);
+
+      if (response.statusCode == 401 &&
+          authenticated &&
+          _accessTokenRefresher != null) {
+        final refreshedAccessToken = await _refreshAccessToken();
+
+        if (refreshedAccessToken != null && refreshedAccessToken.isNotEmpty) {
+          requestHeaders = await _buildHeaders(
+            headers: headers,
+            authenticated: true,
+          );
+
+          response = await request(uri, requestHeaders);
+        }
+      }
 
       return _handleResponse(response);
     } on ApiException {
       rethrow;
     } catch (error) {
       throw ApiException(message: 'Unable to connect to API: $error');
+    }
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final existingRefresh = _refreshFuture;
+
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    final refresher = _accessTokenRefresher;
+
+    if (refresher == null) {
+      return null;
+    }
+
+    final refreshFuture = refresher();
+
+    _refreshFuture = refreshFuture;
+
+    try {
+      return await refreshFuture;
+    } finally {
+      _refreshFuture = null;
     }
   }
 
