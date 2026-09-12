@@ -38,7 +38,7 @@ class ApiClient {
 
   Future<String?>? _refreshFuture;
 
-  Uri _buildUri(String endpoint) {
+  Uri _buildUri(String endpoint, {Map<String, String>? queryParameters}) {
     final normalizedBaseUrl = _baseUrl.endsWith('/')
         ? _baseUrl.substring(0, _baseUrl.length - 1)
         : _baseUrl;
@@ -47,7 +47,15 @@ class ApiClient {
         ? endpoint
         : '/$endpoint';
 
-    return Uri.parse('$normalizedBaseUrl$normalizedEndpoint');
+    final uri = Uri.parse('$normalizedBaseUrl$normalizedEndpoint');
+
+    if (queryParameters == null || queryParameters.isEmpty) {
+      return uri;
+    }
+
+    return uri.replace(
+      queryParameters: {...uri.queryParameters, ...queryParameters},
+    );
   }
 
   Map<String, String> _defaultHeaders() {
@@ -74,10 +82,12 @@ class ApiClient {
   Future<dynamic> get(
     String endpoint, {
     Map<String, String>? headers,
+    Map<String, String>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
       endpoint: endpoint,
+      queryParameters: queryParameters,
       authenticated: authenticated,
       request: (uri, requestHeaders) {
         return _client.get(uri, headers: requestHeaders);
@@ -90,10 +100,12 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
+    Map<String, String>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
       endpoint: endpoint,
+      queryParameters: queryParameters,
       authenticated: authenticated,
       request: (uri, requestHeaders) {
         return _client.post(
@@ -110,10 +122,12 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
+    Map<String, String>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
       endpoint: endpoint,
+      queryParameters: queryParameters,
       authenticated: authenticated,
       request: (uri, requestHeaders) {
         return _client.put(
@@ -130,10 +144,12 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
+    Map<String, String>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
       endpoint: endpoint,
+      queryParameters: queryParameters,
       authenticated: authenticated,
       request: (uri, requestHeaders) {
         return _client.patch(
@@ -150,10 +166,12 @@ class ApiClient {
     String endpoint, {
     Object? body,
     Map<String, String>? headers,
+    Map<String, String>? queryParameters,
     bool authenticated = false,
   }) async {
     return _execute(
       endpoint: endpoint,
+      queryParameters: queryParameters,
       authenticated: authenticated,
       request: (uri, requestHeaders) {
         return _client.delete(
@@ -168,6 +186,7 @@ class ApiClient {
 
   Future<dynamic> _execute({
     required String endpoint,
+    Map<String, String>? queryParameters,
     required bool authenticated,
     required Future<http.Response> Function(
       Uri uri,
@@ -176,7 +195,7 @@ class ApiClient {
     request,
     Map<String, String>? headers,
   }) async {
-    final uri = _buildUri(endpoint);
+    final uri = _buildUri(endpoint, queryParameters: queryParameters);
 
     try {
       var requestHeaders = await _buildHeaders(
