@@ -54,12 +54,26 @@ class AuthService {
 
       return true;
     } on IdentityApiException catch (ex) {
+      if (ex.statusCode != 401) {
+        rethrow;
+      }
+    }
+
+    try {
+      final refreshedTokens = await refreshSession();
+
+      await _identityApiService.getMe(accessToken: refreshedTokens.accessToken);
+
+      return true;
+    } on IdentityApiException catch (ex) {
       if (ex.statusCode == 401) {
         await _sessionManager.clearSession();
         return false;
       }
 
       rethrow;
+    } on StateError {
+      return false;
     }
   }
 
@@ -88,6 +102,36 @@ class AuthService {
     }
 
     return true;
+  }
+
+  Future<AuthTokens> refreshSession() async {
+    final session = await _sessionManager.getSession();
+
+    if (session == null) {
+      throw StateError('No active session.');
+    }
+
+    if (session.refreshTokenExpiresAtUtc.isBefore(DateTime.now().toUtc())) {
+      await _sessionManager.clearSession();
+
+      throw StateError('Refresh token has expired.');
+    }
+
+    try {
+      final refreshedTokens = await _identityApiService.refreshToken(
+        refreshToken: session.refreshToken,
+      );
+
+      await _sessionManager.saveSession(refreshedTokens);
+
+      return refreshedTokens;
+    } on IdentityApiException catch (ex) {
+      if (ex.statusCode == 401) {
+        await _sessionManager.clearSession();
+      }
+
+      rethrow;
+    }
   }
 
   void dispose() {
