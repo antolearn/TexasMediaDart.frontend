@@ -4,10 +4,9 @@ import '../models/health_status.dart';
 import '../services/health_service.dart';
 
 class HomeController extends ChangeNotifier {
-  final HealthService _healthService;
+  HomeController({required this._healthService});
 
-  HomeController({HealthService? healthService})
-    : _healthService = healthService ?? HealthService();
+  final HealthService _healthService;
 
   bool _isLoading = false;
   HealthStatus? _healthStatus;

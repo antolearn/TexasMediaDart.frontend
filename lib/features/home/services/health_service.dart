@@ -2,9 +2,9 @@ import '../../../core/network/api_client.dart';
 import '../models/health_status.dart';
 
 class HealthService {
-  final ApiClient _apiClient;
+  HealthService({required this._apiClient});
 
-  HealthService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  final ApiClient _apiClient;
 
   Future<HealthStatus> getDatabaseHealth() async {
     final response = await _apiClient.get('/health/db');
