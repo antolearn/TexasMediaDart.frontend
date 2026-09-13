@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../organization/services/organization_service.dart';
 import '../services/auth_service.dart';
 
 class StartupPage extends StatefulWidget {
@@ -11,32 +13,50 @@ class StartupPage extends StatefulWidget {
 }
 
 class _StartupPageState extends State<StartupPage> {
-  final AuthService _authService = AuthService();
-
   @override
   void initState() {
     super.initState();
-    _checkSession();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkStartupState();
+    });
   }
 
-  Future<void> _checkSession() async {
-    final isLoggedIn = await _authService.isLoggedIn();
+  Future<void> _checkStartupState() async {
+    final authService = context.read<AuthService>();
+    final organizationService = context.read<OrganizationService>();
 
-    if (!mounted) {
-      return;
+    try {
+      final isLoggedIn = await authService.isLoggedIn();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!isLoggedIn) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.introduction);
+
+        return;
+      }
+
+      final organization = await organizationService.getCurrentOrganization();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (organization == null) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.organizationSetup);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     }
-
-    if (isLoggedIn) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-    } else {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.introduction);
-    }
-  }
-
-  @override
-  void dispose() {
-    _authService.dispose();
-    super.dispose();
   }
 
   @override

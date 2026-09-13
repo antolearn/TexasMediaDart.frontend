@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/routes.dart';
+
 import '../controllers/login_controller.dart';
 
 class LoginPage extends StatefulWidget {
@@ -58,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (success) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushReplacementNamed(AppRoutes.startup);
     }
   }
 

@@ -6,6 +6,7 @@ import '../features/landing/pages/introduction_page.dart';
 import '../features/identity/pages/register_page.dart';
 import '../features/identity/pages/auth_guard.dart';
 import '../features/identity/pages/startup_page.dart';
+import '../features/organization/pages/organization_setup_page.dart';
 
 class AppRoutes {
   static const String startup = '/';
@@ -13,6 +14,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String home = '/home';
+  static const String organizationSetup = '/organization/setup';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -43,6 +45,12 @@ class AppRoutes {
       case signup:
         return MaterialPageRoute(
           builder: (_) => const RegisterPage(),
+          settings: settings,
+        );
+
+      case organizationSetup:
+        return MaterialPageRoute(
+          builder: (_) => const AuthGuard(child: OrganizationSetupPage()),
           settings: settings,
         );
 
