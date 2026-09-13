@@ -5,11 +5,16 @@ import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/network/identity_api_client.dart';
 import '../core/network/main_api_client.dart';
+import '../core/network/organization_api_client.dart';
+
 import '../features/home/controllers/home_controller.dart';
 import '../features/home/services/health_service.dart';
+
 import '../features/identity/services/auth_service.dart';
-import '../features/identity/services/session_manager.dart';
 import '../features/identity/services/current_user_service.dart';
+import '../features/identity/services/session_manager.dart';
+
+import '../features/organization/services/organization_service.dart';
 
 import 'routes.dart';
 
@@ -66,10 +71,35 @@ class TexasMediaDartApp extends StatelessWidget {
           dispose: (_, identityApiClient) => identityApiClient.client.dispose(),
         ),
 
+        Provider<OrganizationApiClient>(
+          create: (context) {
+            final sessionManager = context.read<SessionManager>();
+            final authService = context.read<AuthService>();
+
+            final client = ApiClient(
+              baseUrl: AppConfig.organizationApiBaseUrl,
+              accessTokenProvider: sessionManager.getAccessToken,
+              accessTokenRefresher: () async {
+                final tokens = await authService.refreshSession();
+                return tokens.accessToken;
+              },
+            );
+
+            return OrganizationApiClient(client);
+          },
+          dispose: (_, organizationApiClient) =>
+              organizationApiClient.client.dispose(),
+        ),
+
         Provider<CurrentUserService>(
           create: (context) => CurrentUserService(
             apiClient: context.read<IdentityApiClient>().client,
           ),
+        ),
+
+        Provider<OrganizationService>(
+          create: (context) =>
+              OrganizationService(context.read<OrganizationApiClient>().client),
         ),
 
         Provider<HealthService>(

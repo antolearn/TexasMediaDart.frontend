@@ -8,6 +8,7 @@ class AppConfig {
   static String apiBaseUrl = 'http://localhost:5295';
 
   static String identityApiBaseUrl = 'http://localhost:5248';
+  static String organizationApiBaseUrl = 'http://localhost:5110';
 
   static const String frontendVersion = String.fromEnvironment(
     'FRONTEND_VERSION',
@@ -34,6 +35,8 @@ class AppConfig {
 
     identityApiBaseUrl =
         json['identityApiBaseUrl']?.toString() ?? 'http://localhost:5248';
+    organizationApiBaseUrl =
+        json['organizationApiBaseUrl']?.toString() ?? 'http://localhost:5110';
   }
 
   static bool get isLocal => environment == 'local';

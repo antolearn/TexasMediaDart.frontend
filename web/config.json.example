@@ -1,5 +1,6 @@
 {
   "environment": "local",
   "apiBaseUrl": "http://localhost:5295",
-  "identityApiBaseUrl": "http://localhost:5248"
+  "identityApiBaseUrl": "http://localhost:5248",
+  "organizationApiBaseUrl": "http://localhost:5110"
 }
