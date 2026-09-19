@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../models/current_organization.dart';
+import '../models/user_module_permission.dart';
 
 class OrganizationService {
   OrganizationService(this._apiClient);
@@ -50,5 +51,22 @@ class OrganizationService {
     }
 
     return organization;
+  }
+
+  Future<List<UserModulePermission>> getCurrentUserModules() async {
+    final response = await _apiClient.get(
+      '/api/organizations/current/modules',
+      authenticated: true,
+    );
+
+    if (response is! List) {
+      throw ApiException(message: 'Invalid organization modules response.');
+    }
+
+    return response
+        .map(
+          (item) => UserModulePermission.fromJson(item as Map<String, dynamic>),
+        )
+        .toList();
   }
 }
