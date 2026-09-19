@@ -11,39 +11,36 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<HomeController>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('TexasMediaDart')),
-      body: Stack(
-        children: [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Welcome to TexasMediaDart Inc.',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
+    return Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Welcome to TexasMediaDart Inc.',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
 
-                const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-                _buildHealthStatus(controller),
-              ],
+              _buildHealthStatus(controller),
+            ],
+          ),
+        ),
+
+        if (!AppConfig.isProd)
+          Positioned(
+            left: 12,
+            bottom: 12,
+            child: Text(
+              'Environment: ${AppConfig.environment}\n'
+              'API: ${AppConfig.apiBaseUrl}\n'
+              'Frontend Version: ${AppConfig.frontendVersion}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ),
-
-          if (!AppConfig.isProd)
-            Positioned(
-              left: 12,
-              bottom: 12,
-              child: Text(
-                'Environment: ${AppConfig.environment}\n'
-                'API: ${AppConfig.apiBaseUrl}\n'
-                'Frontend Version: ${AppConfig.frontendVersion}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -91,7 +88,8 @@ class HomePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'API Status: ${controller.isHealthy ? 'Connected' : 'Unavailable'}',
+          'API Status: '
+          '${controller.isHealthy ? 'Connected' : 'Unavailable'}',
         ),
         const SizedBox(height: 6),
         Text('Database: ${health.database}'),

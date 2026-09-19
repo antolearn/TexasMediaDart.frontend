@@ -13,7 +13,7 @@ import '../features/home/services/health_service.dart';
 import '../features/identity/services/auth_service.dart';
 import '../features/identity/services/current_user_service.dart';
 import '../features/identity/services/session_manager.dart';
-
+import '../features/organization/controllers/module_permissions_controller.dart';
 import '../features/organization/services/organization_service.dart';
 
 import 'routes.dart';
@@ -100,6 +100,10 @@ class TexasMediaDartApp extends StatelessWidget {
         Provider<OrganizationService>(
           create: (context) =>
               OrganizationService(context.read<OrganizationApiClient>().client),
+        ),
+        ChangeNotifierProvider<ModulePermissionsController>(
+          create: (context) =>
+              ModulePermissionsController(context.read<OrganizationService>()),
         ),
 
         Provider<HealthService>(
