@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../organization/controllers/module_permissions_controller.dart';
 import '../services/auth_service.dart';
 
 class AuthGuard extends StatefulWidget {
@@ -13,19 +15,23 @@ class AuthGuard extends StatefulWidget {
 }
 
 class _AuthGuardState extends State<AuthGuard> {
-  final AuthService _authService = AuthService();
-
   bool _isChecking = true;
   bool _isAuthenticated = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _checkSession();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkSession();
+    });
   }
 
   Future<void> _checkSession() async {
-    final hasSession = await _authService.hasSession();
+    final authService = context.read<AuthService>();
+
+    final hasSession = await authService.hasSession();
 
     if (!mounted) {
       return;
@@ -36,6 +42,23 @@ class _AuthGuardState extends State<AuthGuard> {
       return;
     }
 
+    final permissionsController = context.read<ModulePermissionsController>();
+
+    await permissionsController.loadModules();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (permissionsController.hasError) {
+      setState(() {
+        _errorMessage = permissionsController.errorMessage;
+        _isChecking = false;
+      });
+
+      return;
+    }
+
     setState(() {
       _isAuthenticated = true;
       _isChecking = false;
@@ -43,15 +66,24 @@ class _AuthGuardState extends State<AuthGuard> {
   }
 
   @override
-  void dispose() {
-    _authService.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     if (_isChecking) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Unable to load application permissions.\n\n'
+              '$_errorMessage',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
     }
 
     if (!_isAuthenticated) {

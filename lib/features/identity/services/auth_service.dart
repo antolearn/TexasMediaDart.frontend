@@ -84,12 +84,12 @@ class AuthService {
   Future<void> logout() async {
     final session = await _sessionManager.getSession();
 
-    if (session != null) {
-      try {
+    try {
+      if (session != null) {
         await _identityApiService.logout(refreshToken: session.refreshToken);
-      } finally {
-        await _sessionManager.clearSession();
       }
+    } finally {
+      await _sessionManager.clearSession();
     }
   }
 
