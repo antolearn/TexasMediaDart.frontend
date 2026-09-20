@@ -11,6 +11,7 @@ import '../features/organization/pages/organization_setup_page.dart';
 import '../features/service_status/pages/service_health_page.dart';
 import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
+import '../features/users/pages/users_page.dart';
 
 class AppRoutes {
   static const String startup = '/';
@@ -74,10 +75,7 @@ class AppRoutes {
         return _moduleRoute(
           settings,
           moduleCode: 'USERS',
-          page: const ModulePlaceholderPage(
-            title: 'Users',
-            description: 'Organization user management.',
-          ),
+          page: const UsersPage(),
         );
 
       case userGroups:
