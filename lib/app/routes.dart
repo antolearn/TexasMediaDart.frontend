@@ -7,7 +7,10 @@ import '../features/identity/pages/register_page.dart';
 import '../features/identity/pages/startup_page.dart';
 import '../features/landing/pages/introduction_page.dart';
 import '../features/organization/pages/module_guard.dart';
+import '../features/organization/models/current_organization.dart';
 import '../features/organization/pages/organization_setup_page.dart';
+import '../features/organization/pages/organization_page.dart';
+import '../features/organization/pages/organization_deactivated_page.dart';
 import '../features/service_status/pages/service_health_page.dart';
 import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
@@ -22,6 +25,7 @@ class AppRoutes {
   static const String home = '/home';
 
   static const String organization = '/organization';
+  static const organizationDeactivated = '/organization-deactivated';
   static const String users = '/users';
   static const String userGroups = '/user-groups';
   static const String roles = '/roles';
@@ -65,12 +69,19 @@ class AppRoutes {
         return _moduleRoute(
           settings,
           moduleCode: 'ORGANIZATION',
-          page: const ModulePlaceholderPage(
-            title: 'Organization',
-            description: 'Organization profile and settings.',
-          ),
+          page: const OrganizationPage(),
         );
 
+      case organizationDeactivated:
+        final organization = settings.arguments is CurrentOrganization
+            ? settings.arguments as CurrentOrganization
+            : null;
+
+        return MaterialPageRoute(
+          builder: (_) =>
+              OrganizationDeactivatedPage(organization: organization),
+          settings: settings,
+        );
       case users:
         return _moduleRoute(
           settings,
@@ -130,7 +141,7 @@ class AppRoutes {
 
       case organizationSetup:
         return MaterialPageRoute(
-          builder: (_) => const AuthGuard(child: OrganizationSetupPage()),
+          builder: (_) => const OrganizationSetupPage(),
           settings: settings,
         );
 

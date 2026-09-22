@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
+import '../../organization/controllers/module_permissions_controller.dart';
 import '../../organization/services/organization_service.dart';
 import '../services/auth_service.dart';
 
@@ -25,6 +26,7 @@ class _StartupPageState extends State<StartupPage> {
   Future<void> _checkStartupState() async {
     final authService = context.read<AuthService>();
     final organizationService = context.read<OrganizationService>();
+    final permissionsController = context.read<ModulePermissionsController>();
 
     try {
       final isLoggedIn = await authService.isLoggedIn();
@@ -34,6 +36,8 @@ class _StartupPageState extends State<StartupPage> {
       }
 
       if (!isLoggedIn) {
+        permissionsController.clear();
+
         Navigator.of(context).pushReplacementNamed(AppRoutes.introduction);
 
         return;
@@ -45,15 +49,50 @@ class _StartupPageState extends State<StartupPage> {
         return;
       }
 
+      //
+      // Authenticated user does not belong to an organization.
+      //
       if (organization == null) {
+        permissionsController.clear();
+
         Navigator.of(context).pushReplacementNamed(AppRoutes.organizationSetup);
-      } else {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+
+        return;
       }
+
+      //
+      // Organization exists but has been deactivated.
+      //
+      if (!organization.isActive) {
+        permissionsController.clear();
+
+        Navigator.of(context).pushReplacementNamed(
+          AppRoutes.organizationDeactivated,
+          arguments: organization,
+        );
+
+        return;
+      }
+
+      //
+      // Future:
+      //
+      // if (!organization.userIsActive) {
+      //   ...
+      // }
+      //
+      // if (!organization.userIsApproved) {
+      //   ...
+      // }
+      //
+
+      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
     } catch (_) {
       if (!mounted) {
         return;
       }
+
+      permissionsController.clear();
 
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     }

@@ -53,6 +53,23 @@ class OrganizationService {
     return organization;
   }
 
+  Future<CurrentOrganization> updateCurrentOrganization({
+    required String name,
+    required bool isActive,
+  }) async {
+    final response = await _apiClient.put(
+      '/api/organizations/current',
+      authenticated: true,
+      body: {'name': name.trim(), 'isActive': isActive},
+    );
+
+    if (response is! Map<String, dynamic>) {
+      throw ApiException(message: 'Invalid organization response.');
+    }
+
+    return CurrentOrganization.fromJson(response);
+  }
+
   Future<List<UserModulePermission>> getCurrentUserModules() async {
     final response = await _apiClient.get(
       '/api/organizations/current/modules',

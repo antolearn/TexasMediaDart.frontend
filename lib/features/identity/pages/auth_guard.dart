@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
 import '../../organization/controllers/module_permissions_controller.dart';
+import '../../organization/services/organization_service.dart';
 import '../services/auth_service.dart';
 
 class AuthGuard extends StatefulWidget {
@@ -30,39 +31,112 @@ class _AuthGuardState extends State<AuthGuard> {
 
   Future<void> _checkSession() async {
     final authService = context.read<AuthService>();
-
-    final hasSession = await authService.hasSession();
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!hasSession) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-      return;
-    }
-
+    final organizationService = context.read<OrganizationService>();
     final permissionsController = context.read<ModulePermissionsController>();
 
-    await permissionsController.loadModules();
+    try {
+      //
+      // 1. Verify that a valid session exists.
+      //
+      final hasSession = await authService.hasSession();
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    if (permissionsController.hasError) {
+      if (!hasSession) {
+        permissionsController.clear();
+
+        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+
+        return;
+      }
+
+      //
+      // 2. Determine the current organization state.
+      //
+      final organization = await organizationService.getCurrentOrganization();
+
+      if (!mounted) {
+        return;
+      }
+
+      //
+      // Authenticated user does not belong to an organization.
+      //
+      if (organization == null) {
+        permissionsController.clear();
+
+        Navigator.of(context).pushReplacementNamed(AppRoutes.organizationSetup);
+
+        return;
+      }
+
+      //
+      // Organization exists but has been deactivated.
+      //
+      if (!organization.isActive) {
+        permissionsController.clear();
+
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.organizationDeactivated,
+          (route) => false,
+          arguments: organization,
+        );
+
+        return;
+      }
+
+      //
+      // Future organization-user lifecycle checks:
+      //
+      // if (!organization.userIsActive) {
+      //   ...
+      // }
+      //
+      // if (!organization.userIsApproved) {
+      //   ...
+      // }
+      //
+
+      //
+      // 3. Organization is valid. Load effective permissions.
+      //
+      await permissionsController.loadModules();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (permissionsController.hasError) {
+        setState(() {
+          _errorMessage = permissionsController.errorMessage;
+          _isChecking = false;
+        });
+
+        return;
+      }
+
+      //
+      // 4. Allow the protected page to render.
+      //
       setState(() {
-        _errorMessage = permissionsController.errorMessage;
+        _isAuthenticated = true;
         _isChecking = false;
       });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
 
-      return;
+      permissionsController.clear();
+
+      setState(() {
+        _errorMessage =
+            'Unable to verify application access. Please try again.';
+        _isChecking = false;
+      });
     }
-
-    setState(() {
-      _isAuthenticated = true;
-      _isChecking = false;
-    });
   }
 
   @override
@@ -76,11 +150,7 @@ class _AuthGuardState extends State<AuthGuard> {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
-              'Unable to load application permissions.\n\n'
-              '$_errorMessage',
-              textAlign: TextAlign.center,
-            ),
+            child: Text(_errorMessage!, textAlign: TextAlign.center),
           ),
         ),
       );
