@@ -37,7 +37,9 @@ class _OrganizationSetupPageState extends State<OrganizationSetupPage> {
     try {
       final organizationService = context.read<OrganizationService>();
 
-      await organizationService.createOrganization(name: _nameController.text);
+      await organizationService.createOrganization(
+        name: _nameController.text.trim(),
+      );
 
       if (!mounted) {
         return;
@@ -148,9 +150,9 @@ class _OrganizationSetupPageState extends State<OrganizationSetupPage> {
 
                       const SizedBox(height: 24),
 
-                      FilledButton(
+                      FilledButton.icon(
                         onPressed: _isLoading ? null : _createOrganization,
-                        child: _isLoading
+                        icon: _isLoading
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
@@ -158,7 +160,10 @@ class _OrganizationSetupPageState extends State<OrganizationSetupPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Create Organization'),
+                            : const Icon(Icons.business),
+                        label: Text(
+                          _isLoading ? 'Creating...' : 'Create Organization',
+                        ),
                       ),
                     ],
                   ),

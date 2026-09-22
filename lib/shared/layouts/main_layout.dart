@@ -3,14 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
 import '../../features/identity/services/auth_service.dart';
-
-import '../../../../features/organization/controllers/module_permissions_controller.dart';
-import '../../../../features/organization/models/user_module_permission.dart';
+import '../../features/organization/controllers/module_permissions_controller.dart';
+import '../../features/organization/models/user_module_permission.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({required this.child, super.key});
 
   final Widget child;
+
   Future<void> _logout(BuildContext context) async {
     final authService = context.read<AuthService>();
     final permissionsController = context.read<ModulePermissionsController>();
@@ -31,10 +31,13 @@ class MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final permissionsController = context.watch<ModulePermissionsController>();
 
+    final canEditOrganization = permissionsController.canUpdate('ORGANIZATION');
+
     final modules =
         permissionsController.modules
             .where(
               (module) =>
+                  module.moduleCode.toUpperCase() != 'ORGANIZATION' &&
                   module.showInMenu &&
                   module.canRead &&
                   module.route != null &&
@@ -56,14 +59,28 @@ class MainLayout extends StatelessWidget {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
+
               const Divider(),
+
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: _buildMenuItems(context, modules),
                 ),
               ),
+
               const Divider(),
+
+              if (canEditOrganization)
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Organization Settings'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+
+                    Navigator.of(context).pushNamed(AppRoutes.organization);
+                  },
+                ),
 
               ListTile(
                 leading: const Icon(Icons.logout),
