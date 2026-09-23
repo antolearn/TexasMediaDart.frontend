@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/network/api_exception.dart';
+import '../controllers/module_permissions_controller.dart';
 import '../models/current_organization.dart';
 import '../services/organization_service.dart';
-import '../../../app/routes.dart';
-import '../controllers/module_permissions_controller.dart';
 
 class OrganizationPage extends StatefulWidget {
   const OrganizationPage({super.key});
@@ -58,6 +58,12 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
     return _nameController.text.trim() != organization.name ||
         _isActive != organization.isActive;
+  }
+
+  bool _canUpdateOrganization(BuildContext context) {
+    final permissionsController = context.read<ModulePermissionsController>();
+
+    return permissionsController.canUpdate('ORGANIZATION');
   }
 
   Future<void> _loadOrganization() async {
@@ -154,6 +160,15 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
   Future<void> _saveOrganization() async {
     if (_isSaving || !_hasChanges) {
+      return;
+    }
+
+    if (!_canUpdateOrganization(context)) {
+      setState(() {
+        _errorMessage =
+            'You do not have permission to update organization settings.';
+      });
+
       return;
     }
 
@@ -413,9 +428,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---------------------------------------------
-          // Child Tabs
-          // ---------------------------------------------
           const TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -445,6 +457,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
     BuildContext context,
     CurrentOrganization organization,
   ) {
+    final canUpdate = _canUpdateOrganization(context);
+
     return SingleChildScrollView(
       child: Form(
         key: _formKey,
@@ -460,11 +474,35 @@ class _OrganizationPageState extends State<OrganizationPage> {
               'Manage the basic information and status of your organization.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+
+            if (!canUpdate) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.lock_outline),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'You have read-only access to organization settings.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
             TextFormField(
               controller: _nameController,
-              enabled: !_isSaving,
+              enabled: canUpdate && !_isSaving,
               decoration: const InputDecoration(
                 labelText: 'Organization Name',
                 hintText: 'Enter organization name',
@@ -501,7 +539,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
                       : 'This organization is inactive.',
                 ),
                 value: _isActive,
-                onChanged: _isSaving
+                onChanged: !canUpdate || _isSaving
                     ? null
                     : (value) {
                         setState(() {
@@ -552,7 +590,9 @@ class _OrganizationPageState extends State<OrganizationPage> {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
-                onPressed: _isSaving || !_hasChanges ? null : _saveOrganization,
+                onPressed: !canUpdate || _isSaving || !_hasChanges
+                    ? null
+                    : _saveOrganization,
                 icon: _isSaving
                     ? const SizedBox(
                         width: 18,
