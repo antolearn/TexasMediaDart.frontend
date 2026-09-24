@@ -15,6 +15,7 @@ class RolesTable extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onAudit,
+    required this.onPermissions,
   });
 
   final List<Role> roles;
@@ -29,6 +30,7 @@ class RolesTable extends StatelessWidget {
   final ValueChanged<Role> onEdit;
   final ValueChanged<Role> onDelete;
   final ValueChanged<Role> onAudit;
+  final ValueChanged<Role> onPermissions;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +154,14 @@ class RolesTable extends StatelessWidget {
                 onPressed: () => onAudit(role),
                 icon: const Icon(Icons.history),
               ),
+              // Permissions are read-only at this stage and available
+              // for every non-deleted role.
+              if (!role.isDeleted)
+                IconButton(
+                  tooltip: 'View role permissions',
+                  onPressed: () => onPermissions(role),
+                  icon: const Icon(Icons.admin_panel_settings_outlined),
+                ),
 
               // Custom, non-deleted roles can be edited
               // when the user has update permission.
