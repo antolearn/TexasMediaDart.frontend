@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../models/role.dart';
+import '../models/role_permission.dart';
 import '../models/role_search_result.dart';
 
 class RolesService {
@@ -116,5 +117,52 @@ class RolesService {
     }
 
     return Role.fromJson(response);
+  }
+
+  Future<List<RolePermission>> getRolePermissions(String roleId) async {
+    final response = await _apiClient.get(
+      '/api/roles/$roleId/permissions',
+      authenticated: true,
+    );
+
+    if (response is! List) {
+      throw ApiException(message: 'Invalid role permissions response.');
+    }
+
+    return response
+        .map((item) => RolePermission.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RolePermission>> updateRolePermissions({
+    required String roleId,
+    required List<RolePermission> permissions,
+  }) async {
+    final response = await _apiClient.put(
+      '/api/roles/$roleId/permissions',
+      body: {
+        'permissions': permissions
+            .map(
+              (permission) => {
+                'moduleId': permission.moduleId,
+                'canCreate': permission.canCreate,
+                'canUpdate': permission.canUpdate,
+                'canDelete': permission.canDelete,
+                'canRead': permission.canRead,
+                'canApprove': permission.canApprove,
+              },
+            )
+            .toList(),
+      },
+      authenticated: true,
+    );
+
+    if (response is! List) {
+      throw ApiException(message: 'Invalid update role permissions response.');
+    }
+
+    return response
+        .map((item) => RolePermission.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 }

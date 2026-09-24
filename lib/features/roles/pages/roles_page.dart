@@ -9,6 +9,7 @@ import '../widgets/delete_role_dialog.dart';
 import '../widgets/edit_role_dialog.dart';
 import '../widgets/role_audit_dialog.dart';
 import '../widgets/role_filters.dart';
+import '../widgets/role_permissions_dialog.dart';
 import '../widgets/roles_pagination.dart';
 import '../widgets/roles_table.dart';
 
@@ -149,6 +150,23 @@ class _RolesPageState extends State<RolesPage> {
     );
   }
 
+  Future<void> _showRolePermissionsDialog(Role role) async {
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return RolePermissionsDialog(role: role);
+      },
+    );
+
+    if (!mounted || updated != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Role permissions updated successfully.')),
+    );
+  }
+
   Future<void> _showAddRoleDialog(RolesController controller) async {
     final created = await showDialog<bool>(
       context: context,
@@ -282,6 +300,11 @@ class _RolesPageState extends State<RolesPage> {
             // Audit is read-only and available for every role.
             onAudit: (role) {
               _showRoleAuditDialog(role);
+            },
+
+            // View or manage role permissions.
+            onPermissions: (role) {
+              _showRolePermissionsDialog(role);
             },
 
             onEdit: (role) {

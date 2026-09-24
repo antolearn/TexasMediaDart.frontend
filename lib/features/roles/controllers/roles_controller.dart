@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/table_preferences/table_preference.dart';
 import '../../../core/table_preferences/table_preference_service.dart';
 import '../models/role.dart';
+import '../models/role_permission.dart';
 import '../services/roles_service.dart';
 
 class RolesController extends ChangeNotifier {
@@ -28,6 +30,12 @@ class RolesController extends ChangeNotifier {
   String? _errorMessage;
 
   List<Role> _roles = [];
+
+  // Role permissions state
+  List<RolePermission> _rolePermissions = [];
+  bool _isLoadingPermissions = false;
+  bool _isSavingPermissions = false;
+  String? _permissionsError;
 
   int _pageNumber = 1;
   int _pageSize = 25;
@@ -69,6 +77,15 @@ class RolesController extends ChangeNotifier {
   String? get sortBy => _sortBy;
 
   bool get sortAscending => _sortAscending;
+
+  List<RolePermission> get rolePermissions =>
+      List.unmodifiable(_rolePermissions);
+
+  bool get isLoadingPermissions => _isLoadingPermissions;
+
+  bool get isSavingPermissions => _isSavingPermissions;
+
+  String? get permissionsError => _permissionsError;
 
   bool get hasPreviousPage => _pageNumber > 1;
 
@@ -298,6 +315,70 @@ class RolesController extends ChangeNotifier {
 
     // Page boundaries have changed, so restart from page 1.
     await _loadPage(1);
+  }
+
+  void clearRolePermissions() {
+    _rolePermissions = [];
+    _permissionsError = null;
+    _isLoadingPermissions = false;
+    _isSavingPermissions = false;
+  }
+
+  Future<void> loadRolePermissions(String roleId) async {
+    if (_isLoadingPermissions || _isSavingPermissions) {
+      return;
+    }
+
+    _isLoadingPermissions = true;
+    _permissionsError = null;
+    _rolePermissions = [];
+
+    notifyListeners();
+
+    try {
+      _rolePermissions = await _rolesService.getRolePermissions(roleId);
+    } on ApiException catch (exception) {
+      _permissionsError = exception.message;
+    } catch (_) {
+      _permissionsError = 'Unable to load role permissions. Please try again.';
+    } finally {
+      _isLoadingPermissions = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> saveRolePermissions({
+    required String roleId,
+    required List<RolePermission> permissions,
+  }) async {
+    if (_isSavingPermissions || _isLoadingPermissions) {
+      return false;
+    }
+
+    _isSavingPermissions = true;
+    _permissionsError = null;
+
+    notifyListeners();
+
+    try {
+      final updatedPermissions = await _rolesService.updateRolePermissions(
+        roleId: roleId,
+        permissions: permissions,
+      );
+
+      _rolePermissions = updatedPermissions;
+
+      return true;
+    } on ApiException catch (exception) {
+      _permissionsError = exception.message;
+      return false;
+    } catch (_) {
+      _permissionsError = 'Unable to save role permissions. Please try again.';
+      return false;
+    } finally {
+      _isSavingPermissions = false;
+      notifyListeners();
+    }
   }
 
   Future<void> firstPage() async {
