@@ -11,6 +11,7 @@ import '../features/organization/models/current_organization.dart';
 import '../features/organization/pages/organization_setup_page.dart';
 import '../features/organization/pages/organization_page.dart';
 import '../features/organization/pages/organization_deactivated_page.dart';
+import '../features/roles/pages/roles_page.dart';
 import '../features/service_status/pages/service_health_page.dart';
 import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
@@ -103,10 +104,7 @@ class AppRoutes {
         return _moduleRoute(
           settings,
           moduleCode: 'ROLES',
-          page: const ModulePlaceholderPage(
-            title: 'Roles',
-            description: 'Role management.',
-          ),
+          page: const RolesPage(),
         );
 
       case permissions:

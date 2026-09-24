@@ -15,6 +15,8 @@ import '../features/identity/services/current_user_service.dart';
 import '../features/identity/services/session_manager.dart';
 import '../features/organization/controllers/module_permissions_controller.dart';
 import '../features/organization/services/organization_service.dart';
+import '../features/roles/controllers/roles_controller.dart';
+import '../features/roles/services/roles_service.dart';
 import '../features/users/controllers/users_controller.dart';
 import '../features/users/services/users_service.dart';
 
@@ -106,6 +108,14 @@ class TexasMediaDartApp extends StatelessWidget {
         ChangeNotifierProvider<ModulePermissionsController>(
           create: (context) =>
               ModulePermissionsController(context.read<OrganizationService>()),
+        ),
+        Provider<RolesService>(
+          create: (context) =>
+              RolesService(context.read<OrganizationApiClient>().client),
+        ),
+
+        ChangeNotifierProvider<RolesController>(
+          create: (context) => RolesController(context.read<RolesService>()),
         ),
         Provider<UsersService>(
           create: (context) =>
