@@ -6,6 +6,7 @@ import '../services/roles_service.dart';
 class RolesController extends ChangeNotifier {
   RolesController(this._rolesService);
 
+  static const List<int> allowedPageSizes = [25, 50, 100];
   final RolesService _rolesService;
 
   bool _isLoading = false;
@@ -213,6 +214,29 @@ class RolesController extends ChangeNotifier {
     }
 
     // A new sort changes the result ordering, so always return to page 1.
+    await _loadPage(1);
+  }
+
+  Future<void> changePageSize(int pageSize) async {
+    if (!allowedPageSizes.contains(pageSize)) {
+      return;
+    }
+
+    if (_pageSize == pageSize || _isLoading) {
+      return;
+    }
+
+    _pageSize = pageSize;
+
+    // Preserve search-first behavior.
+    // Changing page size before the first search should not call the API.
+    if (!_hasSearched) {
+      notifyListeners();
+      return;
+    }
+
+    // Changing page size changes the page boundaries,
+    // so restart from page 1.
     await _loadPage(1);
   }
 
