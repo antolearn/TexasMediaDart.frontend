@@ -32,8 +32,37 @@ class RolesPagination extends StatelessWidget {
         children: [
           Text(recordText, style: const TextStyle(fontWeight: FontWeight.w500)),
 
+          const Spacer(),
+
+          // Page-size selector
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Rows per page:'),
+              const SizedBox(width: 8),
+              DropdownButton<int>(
+                value: controller.pageSize,
+                items: RolesController.allowedPageSizes
+                    .map(
+                      (pageSize) => DropdownMenuItem<int>(
+                        value: pageSize,
+                        child: Text('$pageSize'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: controller.isLoading
+                    ? null
+                    : (pageSize) {
+                        if (pageSize != null) {
+                          controller.changePageSize(pageSize);
+                        }
+                      },
+              ),
+            ],
+          ),
+
           if (hasMultiplePages) ...[
-            const Spacer(),
+            const SizedBox(width: 24),
 
             // First page
             IconButton(
