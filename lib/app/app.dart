@@ -6,6 +6,7 @@ import '../core/network/api_client.dart';
 import '../core/network/identity_api_client.dart';
 import '../core/network/main_api_client.dart';
 import '../core/network/organization_api_client.dart';
+import '../core/table_preferences/table_preference_service.dart';
 
 import '../features/home/controllers/home_controller.dart';
 import '../features/home/services/health_service.dart';
@@ -105,18 +106,31 @@ class TexasMediaDartApp extends StatelessWidget {
           create: (context) =>
               OrganizationService(context.read<OrganizationApiClient>().client),
         ),
+
         ChangeNotifierProvider<ModulePermissionsController>(
           create: (context) =>
               ModulePermissionsController(context.read<OrganizationService>()),
         ),
+
+        // Generic table preference storage.
+        // Roles is the first consumer, but this can later be reused
+        // by Users, Contacts, and other searchable tables.
+        Provider<TablePreferenceService>(
+          create: (_) => TablePreferenceService(),
+        ),
+
         Provider<RolesService>(
           create: (context) =>
               RolesService(context.read<OrganizationApiClient>().client),
         ),
 
         ChangeNotifierProvider<RolesController>(
-          create: (context) => RolesController(context.read<RolesService>()),
+          create: (context) => RolesController(
+            context.read<RolesService>(),
+            context.read<TablePreferenceService>(),
+          )..loadPreferences(),
         ),
+
         Provider<UsersService>(
           create: (context) =>
               UsersService(context.read<MainApiClient>().client),

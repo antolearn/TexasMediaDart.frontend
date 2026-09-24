@@ -1,17 +1,29 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/table_preferences/table_preference.dart';
+import '../../../core/table_preferences/table_preference_service.dart';
 import '../models/role.dart';
 import '../services/roles_service.dart';
 
 class RolesController extends ChangeNotifier {
-  RolesController(this._rolesService);
+  RolesController(this._rolesService, this._tablePreferenceService);
 
+  static const String tableKey = 'ROLES';
   static const List<int> allowedPageSizes = [25, 50, 100];
+
+  static const Set<String> allowedSortFields = {
+    'name',
+    'description',
+    'createdUtc',
+  };
+
   final RolesService _rolesService;
+  final TablePreferenceService _tablePreferenceService;
 
   bool _isLoading = false;
   bool _isCreating = false;
   bool _hasSearched = false;
+  bool _preferencesLoaded = false;
 
   String? _errorMessage;
 
@@ -33,6 +45,8 @@ class RolesController extends ChangeNotifier {
   bool get isCreating => _isCreating;
 
   bool get hasSearched => _hasSearched;
+
+  bool get preferencesLoaded => _preferencesLoaded;
 
   String? get errorMessage => _errorMessage;
 
@@ -66,6 +80,46 @@ class RolesController extends ChangeNotifier {
     }
 
     return (_totalCount / _pageSize).ceil();
+  }
+
+  Future<void> loadPreferences() async {
+    if (_preferencesLoaded) {
+      return;
+    }
+
+    try {
+      final preference = await _tablePreferenceService.load(tableKey);
+
+      if (preference != null) {
+        if (allowedPageSizes.contains(preference.pageSize)) {
+          _pageSize = preference.pageSize;
+        }
+
+        final savedSortBy = preference.sortBy;
+
+        if (savedSortBy == null) {
+          _sortBy = null;
+          _sortAscending = true;
+        } else if (allowedSortFields.contains(savedSortBy)) {
+          _sortBy = savedSortBy;
+          _sortAscending = preference.sortAscending;
+        }
+      }
+    } finally {
+      _preferencesLoaded = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    await _tablePreferenceService.save(
+      TablePreference(
+        tableKey: tableKey,
+        pageSize: _pageSize,
+        sortBy: _sortBy,
+        sortAscending: _sortAscending,
+      ),
+    );
   }
 
   Future<void> applyFilters({
@@ -183,9 +237,8 @@ class RolesController extends ChangeNotifier {
     _isActive = true;
     _includeDeleted = false;
 
-    _sortBy = null;
-    _sortAscending = true;
-
+    // Sorting and page size are table preferences, so Clear does not
+    // reset them. Clear only resets the search/filter criteria.
     _roles = [];
 
     _pageNumber = 1;
@@ -203,17 +256,23 @@ class RolesController extends ChangeNotifier {
       return;
     }
 
+    if (!allowedSortFields.contains(sortBy)) {
+      return;
+    }
+
     _sortBy = sortBy;
     _sortAscending = ascending;
 
-    // Preserve the search-first behavior.
-    // Selecting a sort before the first search should not call the API.
+    await _savePreferences();
+
+    // Preserve search-first behavior.
+    // Sorting before the first search must not execute the API request.
     if (!_hasSearched) {
       notifyListeners();
       return;
     }
 
-    // A new sort changes the result ordering, so always return to page 1.
+    // Sorting changes result ordering, so restart from page 1.
     await _loadPage(1);
   }
 
@@ -228,15 +287,16 @@ class RolesController extends ChangeNotifier {
 
     _pageSize = pageSize;
 
+    await _savePreferences();
+
     // Preserve search-first behavior.
-    // Changing page size before the first search should not call the API.
+    // Changing page size before the first search must not execute the API.
     if (!_hasSearched) {
       notifyListeners();
       return;
     }
 
-    // Changing page size changes the page boundaries,
-    // so restart from page 1.
+    // Page boundaries have changed, so restart from page 1.
     await _loadPage(1);
   }
 
