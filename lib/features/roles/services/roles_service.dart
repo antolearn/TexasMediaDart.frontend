@@ -12,6 +12,8 @@ class RolesService {
     String? search,
     bool? isActive,
     bool includeDeleted = false,
+    String? sortBy,
+    String? sortDirection,
     int pageNumber = 1,
     int pageSize = 25,
   }) async {
@@ -29,6 +31,16 @@ class RolesService {
 
     if (isActive != null) {
       queryParameters.add('isActive=$isActive');
+    }
+
+    if (sortBy != null && sortBy.trim().isNotEmpty) {
+      queryParameters.add('sortBy=${Uri.encodeQueryComponent(sortBy.trim())}');
+    }
+
+    if (sortDirection != null && sortDirection.trim().isNotEmpty) {
+      queryParameters.add(
+        'sortDirection=${Uri.encodeQueryComponent(sortDirection.trim())}',
+      );
     }
 
     final response = await _apiClient.get(

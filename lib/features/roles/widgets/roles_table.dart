@@ -9,6 +9,9 @@ class RolesTable extends StatelessWidget {
     required this.roles,
     required this.canUpdate,
     required this.canDelete,
+    required this.sortBy,
+    required this.sortAscending,
+    required this.onSort,
     required this.onEdit,
     required this.onDelete,
     required this.onAudit,
@@ -17,6 +20,11 @@ class RolesTable extends StatelessWidget {
   final List<Role> roles;
   final bool canUpdate;
   final bool canDelete;
+
+  final String? sortBy;
+  final bool sortAscending;
+
+  final void Function(String sortBy, bool ascending) onSort;
 
   final ValueChanged<Role> onEdit;
   final ValueChanged<Role> onDelete;
@@ -30,20 +38,50 @@ class RolesTable extends StatelessWidget {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Description')),
-              DataColumn(label: Text('Type')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Approved')),
-              DataColumn(label: Text('Created')),
-              DataColumn(label: Text('Actions')),
+            sortColumnIndex: _sortColumnIndex,
+            sortAscending: sortAscending,
+            columns: [
+              DataColumn(
+                label: const Text('Name'),
+                onSort: (_, ascending) {
+                  onSort('name', ascending);
+                },
+              ),
+              DataColumn(
+                label: const Text('Description'),
+                onSort: (_, ascending) {
+                  onSort('description', ascending);
+                },
+              ),
+              const DataColumn(label: Text('Type')),
+              const DataColumn(label: Text('Status')),
+              const DataColumn(label: Text('Approved')),
+              DataColumn(
+                label: const Text('Created'),
+                onSort: (_, ascending) {
+                  onSort('createdUtc', ascending);
+                },
+              ),
+              const DataColumn(label: Text('Actions')),
             ],
             rows: roles.map(_buildRoleRow).toList(),
           ),
         ),
       ),
     );
+  }
+
+  int? get _sortColumnIndex {
+    switch (sortBy) {
+      case 'name':
+        return 0;
+      case 'description':
+        return 1;
+      case 'createdUtc':
+        return 5;
+      default:
+        return null;
+    }
   }
 
   DataRow _buildRoleRow(Role role) {
@@ -164,7 +202,9 @@ class RolesTable extends StatelessWidget {
   String _formatDateTime(DateTime value) {
     final local = value.toLocal();
 
-    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    String twoDigits(int number) {
+      return number.toString().padLeft(2, '0');
+    }
 
     return '${local.year}-'
         '${twoDigits(local.month)}-'

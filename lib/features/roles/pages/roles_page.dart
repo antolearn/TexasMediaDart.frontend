@@ -272,6 +272,13 @@ class _RolesPageState extends State<RolesPage> {
             canUpdate: canUpdate,
             canDelete: canDelete,
 
+            // Server-side sorting.
+            sortBy: controller.sortBy,
+            sortAscending: controller.sortAscending,
+            onSort: (sortBy, ascending) {
+              controller.sortByColumn(sortBy, ascending);
+            },
+
             // Audit is read-only and available for every role.
             onAudit: (role) {
               _showRoleAuditDialog(role);
