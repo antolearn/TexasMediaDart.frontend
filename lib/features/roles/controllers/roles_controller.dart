@@ -50,7 +50,15 @@ class RolesController extends ChangeNotifier {
 
   bool get hasPreviousPage => _pageNumber > 1;
 
-  bool get hasNextPage => _pageNumber * _pageSize < _totalCount;
+  bool get hasNextPage => _pageNumber < totalPages;
+
+  int get totalPages {
+    if (_totalCount == 0 || _pageSize <= 0) {
+      return 0;
+    }
+
+    return (_totalCount / _pageSize).ceil();
+  }
 
   Future<void> applyFilters({
     required String search,
@@ -175,12 +183,12 @@ class RolesController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> nextPage() async {
-    if (!hasNextPage || _isLoading || !_hasSearched) {
+  Future<void> firstPage() async {
+    if (!hasPreviousPage || _isLoading || !_hasSearched) {
       return;
     }
 
-    await _loadPage(_pageNumber + 1);
+    await _loadPage(1);
   }
 
   Future<void> previousPage() async {
@@ -189,6 +197,28 @@ class RolesController extends ChangeNotifier {
     }
 
     await _loadPage(_pageNumber - 1);
+  }
+
+  Future<void> nextPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    await _loadPage(_pageNumber + 1);
+  }
+
+  Future<void> lastPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    final lastPageNumber = totalPages;
+
+    if (lastPageNumber <= 0) {
+      return;
+    }
+
+    await _loadPage(lastPageNumber);
   }
 
   Future<void> refresh() async {
