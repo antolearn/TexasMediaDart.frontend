@@ -24,6 +24,9 @@ class RolesController extends ChangeNotifier {
   bool? _isActive = true;
   bool _includeDeleted = false;
 
+  String? _sortBy;
+  bool _sortAscending = true;
+
   bool get isLoading => _isLoading;
 
   bool get isCreating => _isCreating;
@@ -48,9 +51,21 @@ class RolesController extends ChangeNotifier {
 
   bool get includeDeleted => _includeDeleted;
 
+  String? get sortBy => _sortBy;
+
+  bool get sortAscending => _sortAscending;
+
   bool get hasPreviousPage => _pageNumber > 1;
 
-  bool get hasNextPage => _pageNumber * _pageSize < _totalCount;
+  bool get hasNextPage => _pageNumber < totalPages;
+
+  int get totalPages {
+    if (_totalCount == 0 || _pageSize <= 0) {
+      return 0;
+    }
+
+    return (_totalCount / _pageSize).ceil();
+  }
 
   Future<void> applyFilters({
     required String search,
@@ -76,6 +91,10 @@ class RolesController extends ChangeNotifier {
         search: _search,
         isActive: _isActive,
         includeDeleted: _includeDeleted,
+        sortBy: _sortBy,
+        sortDirection: _sortBy == null
+            ? null
+            : (_sortAscending ? 'asc' : 'desc'),
         pageNumber: pageNumber,
         pageSize: _pageSize,
       );
@@ -163,6 +182,9 @@ class RolesController extends ChangeNotifier {
     _isActive = true;
     _includeDeleted = false;
 
+    _sortBy = null;
+    _sortAscending = true;
+
     _roles = [];
 
     _pageNumber = 1;
@@ -175,12 +197,31 @@ class RolesController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> nextPage() async {
-    if (!hasNextPage || _isLoading || !_hasSearched) {
+  Future<void> sortByColumn(String sortBy, bool ascending) async {
+    if (_isLoading) {
       return;
     }
 
-    await _loadPage(_pageNumber + 1);
+    _sortBy = sortBy;
+    _sortAscending = ascending;
+
+    // Preserve the search-first behavior.
+    // Selecting a sort before the first search should not call the API.
+    if (!_hasSearched) {
+      notifyListeners();
+      return;
+    }
+
+    // A new sort changes the result ordering, so always return to page 1.
+    await _loadPage(1);
+  }
+
+  Future<void> firstPage() async {
+    if (!hasPreviousPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    await _loadPage(1);
   }
 
   Future<void> previousPage() async {
@@ -189,6 +230,28 @@ class RolesController extends ChangeNotifier {
     }
 
     await _loadPage(_pageNumber - 1);
+  }
+
+  Future<void> nextPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    await _loadPage(_pageNumber + 1);
+  }
+
+  Future<void> lastPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    final lastPageNumber = totalPages;
+
+    if (lastPageNumber <= 0) {
+      return;
+    }
+
+    await _loadPage(lastPageNumber);
   }
 
   Future<void> refresh() async {
