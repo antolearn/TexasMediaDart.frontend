@@ -20,6 +20,8 @@ import '../features/roles/controllers/roles_controller.dart';
 import '../features/roles/services/roles_service.dart';
 import '../features/users/controllers/users_controller.dart';
 import '../features/users/services/users_service.dart';
+import '../features/user_groups/controllers/user_groups_controller.dart';
+import '../features/user_groups/services/user_groups_service.dart';
 
 import 'routes.dart';
 
@@ -129,6 +131,15 @@ class TexasMediaDartApp extends StatelessWidget {
             context.read<RolesService>(),
             context.read<TablePreferenceService>(),
           )..loadPreferences(),
+        ),
+        Provider<UserGroupsService>(
+          create: (context) =>
+              UserGroupsService(context.read<OrganizationApiClient>().client),
+        ),
+
+        ChangeNotifierProvider<UserGroupsController>(
+          create: (context) =>
+              UserGroupsController(context.read<UserGroupsService>()),
         ),
 
         Provider<UsersService>(

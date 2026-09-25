@@ -16,6 +16,7 @@ import '../features/service_status/pages/service_health_page.dart';
 import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
 import '../features/users/pages/users_page.dart';
+import '../features/user_groups/pages/user_groups_page.dart';
 
 class AppRoutes {
   static const String startup = '/';
@@ -94,10 +95,7 @@ class AppRoutes {
         return _moduleRoute(
           settings,
           moduleCode: 'USER_GROUPS',
-          page: const ModulePlaceholderPage(
-            title: 'User Groups',
-            description: 'User group management.',
-          ),
+          page: const UserGroupsPage(),
         );
 
       case roles:
