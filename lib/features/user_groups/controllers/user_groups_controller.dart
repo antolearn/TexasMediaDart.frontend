@@ -7,6 +7,11 @@ class UserGroupsController extends ChangeNotifier {
   UserGroupsController(this._userGroupsService);
 
   static const List<int> allowedPageSizes = [25, 50, 100];
+  static const Set<String> allowedSortFields = {
+    'name',
+    'description',
+    'createdUtc',
+  };
 
   final UserGroupsService _userGroupsService;
 
@@ -27,12 +32,15 @@ class UserGroupsController extends ChangeNotifier {
   bool? _isActive = true;
   bool? _isApproved;
   bool _includeDeleted = false;
-
+  String? _sortBy;
+  bool _sortAscending = true;
   bool get isLoading => _isLoading;
   bool get hasSearched => _hasSearched;
   bool get isCreating => _isCreating;
   bool get isUpdating => _isUpdating;
   bool get isDeleting => _isDeleting;
+  String? get sortBy => _sortBy;
+  bool get sortAscending => _sortAscending;
 
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
@@ -86,6 +94,10 @@ class UserGroupsController extends ChangeNotifier {
         isActive: _isActive,
         isApproved: _isApproved,
         includeDeleted: _includeDeleted,
+        sortBy: _sortBy,
+        sortDirection: _sortBy == null
+            ? null
+            : (_sortAscending ? 'asc' : 'desc'),
         pageNumber: pageNumber,
         pageSize: _pageSize,
       );
@@ -203,6 +215,26 @@ class UserGroupsController extends ChangeNotifier {
     _isLoading = false;
 
     notifyListeners();
+  }
+
+  Future<void> sortByColumn(String sortBy, bool ascending) async {
+    if (_isLoading) {
+      return;
+    }
+
+    if (!allowedSortFields.contains(sortBy)) {
+      return;
+    }
+
+    _sortBy = sortBy;
+    _sortAscending = ascending;
+
+    if (!_hasSearched) {
+      notifyListeners();
+      return;
+    }
+
+    await _loadPage(1);
   }
 
   Future<void> changePageSize(int pageSize) async {

@@ -13,6 +13,8 @@ class UserGroupsService {
     bool? isActive,
     bool? isApproved,
     bool includeDeleted = false,
+    String? sortBy,
+    String? sortDirection,
     int pageNumber = 1,
     int pageSize = 25,
   }) async {
@@ -36,6 +38,15 @@ class UserGroupsService {
       queryParameters.add('isApproved=$isApproved');
     }
 
+    if (sortBy != null && sortBy.trim().isNotEmpty) {
+      queryParameters.add('sortBy=${Uri.encodeQueryComponent(sortBy.trim())}');
+    }
+
+    if (sortDirection != null && sortDirection.trim().isNotEmpty) {
+      queryParameters.add(
+        'sortDirection=${Uri.encodeQueryComponent(sortDirection.trim())}',
+      );
+    }
     final response = await _apiClient.get(
       '/api/user-groups?${queryParameters.join('&')}',
       authenticated: true,

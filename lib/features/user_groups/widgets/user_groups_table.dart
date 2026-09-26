@@ -9,6 +9,9 @@ class UserGroupsTable extends StatelessWidget {
     required this.userGroups,
     required this.canUpdate,
     required this.canDelete,
+    required this.sortBy,
+    required this.sortAscending,
+    required this.onSort,
     required this.onEdit,
     required this.onDelete,
   });
@@ -16,6 +19,10 @@ class UserGroupsTable extends StatelessWidget {
   final List<UserGroup> userGroups;
   final bool canUpdate;
   final bool canDelete;
+
+  final String? sortBy;
+  final bool sortAscending;
+  final void Function(String sortBy, bool ascending) onSort;
 
   final ValueChanged<UserGroup> onEdit;
   final ValueChanged<UserGroup> onDelete;
@@ -28,19 +35,71 @@ class UserGroupsTable extends StatelessWidget {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Description')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Approved')),
-              DataColumn(label: Text('Created By')),
-              DataColumn(label: Text('Actions')),
+            sortColumnIndex: _sortColumnIndex,
+            sortAscending: sortAscending,
+            columns: [
+              DataColumn(
+                label: const Text('Name'),
+                onSort: (_, ascending) {
+                  onSort('name', ascending);
+                },
+              ),
+              DataColumn(
+                label: const Text('Description'),
+                onSort: (_, ascending) {
+                  onSort('description', ascending);
+                },
+              ),
+              const DataColumn(label: Text('Status')),
+              const DataColumn(label: Text('Approved')),
+              const DataColumn(label: Text('Created By')),
+              DataColumn(
+                label: const Text('Created Date'),
+                onSort: (_, ascending) {
+                  onSort('createdUtc', ascending);
+                },
+              ),
+              const DataColumn(label: Text('Actions')),
             ],
             rows: userGroups.map(_buildUserGroupRow).toList(),
           ),
         ),
       ),
     );
+  }
+
+  int? get _sortColumnIndex {
+    switch (sortBy) {
+      case 'name':
+        return 0;
+      case 'description':
+        return 1;
+      case 'createdUtc':
+        return 5;
+      default:
+        return null;
+    }
+  }
+
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    final year = local.year;
+
+    var hour = local.hour;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+
+    hour %= 12;
+    if (hour == 0) {
+      hour = 12;
+    }
+
+    final formattedHour = hour.toString().padLeft(2, '0');
+
+    return '$month/$day/$year $formattedHour:$minute $period';
   }
 
   DataRow _buildUserGroupRow(UserGroup group) {
@@ -88,6 +147,7 @@ class UserGroupsTable extends StatelessWidget {
 
         DataCell(Text(group.createdBy)),
 
+        DataCell(Text(_formatDateTime(group.createdUtc))),
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
