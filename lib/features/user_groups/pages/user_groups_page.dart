@@ -252,6 +252,11 @@ class _UserGroupsPageState extends State<UserGroupsPage> {
             userGroups: controller.userGroups,
             canUpdate: canUpdate,
             canDelete: canDelete,
+            sortBy: controller.sortBy,
+            sortAscending: controller.sortAscending,
+            onSort: (sortBy, ascending) {
+              controller.sortByColumn(sortBy, ascending);
+            },
             onEdit: (userGroup) {
               _showEditUserGroupDialog(userGroup, controller);
             },
