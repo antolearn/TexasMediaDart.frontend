@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../models/user_group_search_result.dart';
 import '../models/user_group.dart';
+import '../models/user_group_member_search_result.dart';
 
 class UserGroupsService {
   UserGroupsService(this._apiClient);
@@ -123,5 +124,59 @@ class UserGroupsService {
     }
 
     return UserGroup.fromJson(response);
+  }
+
+  Future<UserGroupMemberSearchResult> searchMembers({
+    required String userGroupId,
+    bool? isActive,
+    bool? isApproved,
+    int pageNumber = 1,
+    int pageSize = 25,
+  }) async {
+    final queryParameters = <String>[
+      'pageNumber=$pageNumber',
+      'pageSize=$pageSize',
+    ];
+
+    if (isActive != null) {
+      queryParameters.add('isActive=$isActive');
+    }
+
+    if (isApproved != null) {
+      queryParameters.add('isApproved=$isApproved');
+    }
+
+    final response = await _apiClient.get(
+      '/api/user-groups/$userGroupId/members'
+      '?${queryParameters.join('&')}',
+      authenticated: true,
+    );
+
+    if (response is! Map<String, dynamic>) {
+      throw ApiException(message: 'Invalid user group members response.');
+    }
+
+    return UserGroupMemberSearchResult.fromJson(response);
+  }
+
+  Future<void> addMember({
+    required String userGroupId,
+    required int organizationUserId,
+  }) async {
+    await _apiClient.post(
+      '/api/user-groups/$userGroupId/members',
+      body: {'organizationUserId': organizationUserId},
+      authenticated: true,
+    );
+  }
+
+  Future<void> removeMember({
+    required String userGroupId,
+    required int organizationUserId,
+  }) async {
+    await _apiClient.delete(
+      '/api/user-groups/$userGroupId/members/$organizationUserId',
+      authenticated: true,
+    );
   }
 }

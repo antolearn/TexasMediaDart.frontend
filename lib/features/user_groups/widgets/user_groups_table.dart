@@ -12,6 +12,7 @@ class UserGroupsTable extends StatelessWidget {
     required this.sortBy,
     required this.sortAscending,
     required this.onSort,
+    required this.onManageMembers,
     required this.onEdit,
     required this.onDelete,
   });
@@ -24,6 +25,7 @@ class UserGroupsTable extends StatelessWidget {
   final bool sortAscending;
   final void Function(String sortBy, bool ascending) onSort;
 
+  final ValueChanged<UserGroup> onManageMembers;
   final ValueChanged<UserGroup> onEdit;
   final ValueChanged<UserGroup> onDelete;
 
@@ -148,10 +150,18 @@ class UserGroupsTable extends StatelessWidget {
         DataCell(Text(group.createdBy)),
 
         DataCell(Text(_formatDateTime(group.createdUtc))),
+
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (canModifyGroup)
+                IconButton(
+                  tooltip: 'Manage Members',
+                  onPressed: () => onManageMembers(group),
+                  icon: const Icon(Icons.group_outlined),
+                ),
+
               if (canUpdate && canModifyGroup)
                 IconButton(
                   tooltip: 'Edit',
@@ -173,7 +183,10 @@ class UserGroupsTable extends StatelessWidget {
                 ),
 
               if (!group.isDeleted && !canUpdate && !canDelete)
-                const Text('View only', style: TextStyle(color: Colors.grey)),
+                const Tooltip(
+                  message: 'You have read-only access.',
+                  child: Icon(Icons.visibility_outlined, color: Colors.grey),
+                ),
             ],
           ),
         ),
