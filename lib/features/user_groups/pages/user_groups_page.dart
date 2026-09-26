@@ -10,6 +10,7 @@ import '../widgets/edit_user_group_dialog.dart';
 import '../widgets/user_group_filters.dart';
 import '../widgets/user_groups_pagination.dart';
 import '../widgets/user_groups_table.dart';
+import '../widgets/manage_user_group_members_dialog.dart';
 
 class UserGroupsPage extends StatefulWidget {
   const UserGroupsPage({super.key});
@@ -223,6 +224,17 @@ class _UserGroupsPageState extends State<UserGroupsPage> {
     );
   }
 
+  Future<void> _showManageMembers(UserGroup userGroup, bool canUpdate) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ManageUserGroupMembersDialog(
+        userGroup: userGroup,
+        canUpdate: canUpdate,
+      ),
+    );
+  }
+
   Widget _buildContent(
     UserGroupsController controller, {
     required bool canUpdate,
@@ -256,6 +268,9 @@ class _UserGroupsPageState extends State<UserGroupsPage> {
             sortAscending: controller.sortAscending,
             onSort: (sortBy, ascending) {
               controller.sortByColumn(sortBy, ascending);
+            },
+            onManageMembers: (userGroup) {
+              _showManageMembers(userGroup, canUpdate);
             },
             onEdit: (userGroup) {
               _showEditUserGroupDialog(userGroup, controller);
