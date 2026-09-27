@@ -13,10 +13,15 @@ class UsersService {
     bool? isActive,
     bool? isApproved,
     String? identityUserId,
+    String? email,
+    String sortBy = 'createdUtc',
+    String sortDirection = 'desc',
   }) async {
     final queryParameters = <String>[
       'pageNumber=$pageNumber',
       'pageSize=$pageSize',
+      'sortBy=${Uri.encodeQueryComponent(sortBy)}',
+      'sortDirection=${Uri.encodeQueryComponent(sortDirection)}',
     ];
 
     if (isActive != null) {
@@ -31,6 +36,10 @@ class UsersService {
       queryParameters.add(
         'identityUserId=${Uri.encodeQueryComponent(identityUserId.trim())}',
       );
+    }
+
+    if (email != null && email.trim().isNotEmpty) {
+      queryParameters.add('email=${Uri.encodeQueryComponent(email.trim())}');
     }
 
     final response = await _apiClient.get(

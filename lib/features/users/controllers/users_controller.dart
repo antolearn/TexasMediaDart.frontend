@@ -6,9 +6,13 @@ import '../services/users_service.dart';
 class UsersController extends ChangeNotifier {
   UsersController(this._usersService);
 
+  static const List<int> allowedPageSizes = [25, 50, 100];
+
   final UsersService _usersService;
 
   bool _isLoading = false;
+  bool _hasSearched = false;
+
   String? _errorMessage;
 
   List<OrganizationUser> _users = [];
@@ -17,7 +21,16 @@ class UsersController extends ChangeNotifier {
   int _pageSize = 25;
   int _totalCount = 0;
 
+  String? _email;
+  bool? _isActive = true;
+  bool? _isApproved;
+
+  String _sortBy = 'createdUtc';
+  bool _sortAscending = false;
+
   bool get isLoading => _isLoading;
+
+  bool get hasSearched => _hasSearched;
 
   String? get errorMessage => _errorMessage;
 
@@ -31,19 +44,59 @@ class UsersController extends ChangeNotifier {
 
   int get totalCount => _totalCount;
 
+  String? get email => _email;
+
+  bool? get isActive => _isActive;
+
+  bool? get isApproved => _isApproved;
+
+  String get sortBy => _sortBy;
+
+  bool get sortAscending => _sortAscending;
+
   bool get hasPreviousPage => _pageNumber > 1;
 
-  bool get hasNextPage => _pageNumber * _pageSize < _totalCount;
+  bool get hasNextPage => _pageNumber < totalPages;
 
-  Future<void> loadUsers({int pageNumber = 1}) async {
+  int get totalPages {
+    if (_totalCount == 0 || _pageSize <= 0) {
+      return 0;
+    }
+
+    return (_totalCount / _pageSize).ceil();
+  }
+
+  Future<void> applyFilters({
+    String? email,
+    required bool? isActive,
+    required bool? isApproved,
+  }) async {
+    final trimmedEmail = email?.trim();
+
+    _email = trimmedEmail == null || trimmedEmail.isEmpty ? null : trimmedEmail;
+
+    _isActive = isActive;
+    _isApproved = isApproved;
+
+    await _loadPage(1);
+  }
+
+  Future<void> _loadPage(int pageNumber) async {
     _isLoading = true;
+    _hasSearched = true;
     _errorMessage = null;
+
     notifyListeners();
 
     try {
       final result = await _usersService.searchUsers(
         pageNumber: pageNumber,
         pageSize: _pageSize,
+        email: _email,
+        isActive: _isActive,
+        isApproved: _isApproved,
+        sortBy: _sortBy,
+        sortDirection: _sortAscending ? 'asc' : 'desc',
       );
 
       _users = result.items;
@@ -52,6 +105,8 @@ class UsersController extends ChangeNotifier {
       _totalCount = result.totalCount;
     } catch (exception) {
       _users = [];
+      _pageNumber = 1;
+      _totalCount = 0;
       _errorMessage = exception.toString();
     } finally {
       _isLoading = false;
@@ -59,23 +114,100 @@ class UsersController extends ChangeNotifier {
     }
   }
 
-  Future<void> nextPage() async {
-    if (!hasNextPage || _isLoading) {
+  void clearFilters() {
+    _email = null;
+    _isActive = true;
+    _isApproved = null;
+
+    _users = [];
+    _pageNumber = 1;
+    _totalCount = 0;
+
+    _errorMessage = null;
+    _hasSearched = false;
+    _isLoading = false;
+
+    notifyListeners();
+  }
+
+  Future<void> sortByCreatedUtc(bool ascending) async {
+    if (_isLoading) {
       return;
     }
 
-    await loadUsers(pageNumber: _pageNumber + 1);
+    _sortBy = 'createdUtc';
+    _sortAscending = ascending;
+
+    if (!_hasSearched) {
+      notifyListeners();
+      return;
+    }
+
+    await _loadPage(1);
+  }
+
+  Future<void> changePageSize(int pageSize) async {
+    if (!allowedPageSizes.contains(pageSize)) {
+      return;
+    }
+
+    if (_pageSize == pageSize || _isLoading) {
+      return;
+    }
+
+    _pageSize = pageSize;
+
+    if (!_hasSearched) {
+      notifyListeners();
+      return;
+    }
+
+    await _loadPage(1);
+  }
+
+  Future<void> firstPage() async {
+    if (!hasPreviousPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    await _loadPage(1);
   }
 
   Future<void> previousPage() async {
-    if (!hasPreviousPage || _isLoading) {
+    if (!hasPreviousPage || _isLoading || !_hasSearched) {
       return;
     }
 
-    await loadUsers(pageNumber: _pageNumber - 1);
+    await _loadPage(_pageNumber - 1);
+  }
+
+  Future<void> nextPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    await _loadPage(_pageNumber + 1);
+  }
+
+  Future<void> lastPage() async {
+    if (!hasNextPage || _isLoading || !_hasSearched) {
+      return;
+    }
+
+    final lastPageNumber = totalPages;
+
+    if (lastPageNumber <= 0) {
+      return;
+    }
+
+    await _loadPage(lastPageNumber);
   }
 
   Future<void> refresh() async {
-    await loadUsers(pageNumber: _pageNumber);
+    if (!_hasSearched || _isLoading) {
+      return;
+    }
+
+    await _loadPage(_pageNumber);
   }
 }
