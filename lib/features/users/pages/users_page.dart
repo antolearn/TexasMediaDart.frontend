@@ -13,18 +13,10 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  @override
-  void initState() {
-    super.initState();
+  final TextEditingController _emailController = TextEditingController();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-
-      context.read<UsersController>().loadUsers();
-    });
-  }
+  bool? _selectedIsActive = true;
+  bool? _selectedIsApproved;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +33,9 @@ class _UsersPageState extends State<UsersPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(context, controller, canCreate: canCreate),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          _buildFilters(controller),
+          const SizedBox(height: 20),
           Expanded(
             child: _buildContent(
               controller,
@@ -78,8 +72,10 @@ class _UsersPageState extends State<UsersPage> {
           ),
         ),
         IconButton(
-          tooltip: 'Refresh',
-          onPressed: controller.isLoading ? null : () => controller.refresh(),
+          tooltip: 'Refresh search results',
+          onPressed: controller.hasSearched && !controller.isLoading
+              ? controller.refresh
+              : null,
           icon: const Icon(Icons.refresh),
         ),
         const SizedBox(width: 8),
@@ -99,11 +95,134 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
+  Widget _buildFilters(UsersController controller) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+          width: 280,
+          child: TextField(
+            controller: _emailController,
+            enabled: !controller.isLoading,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              hintText: 'Search by email',
+              prefixIcon: Icon(Icons.email_outlined),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onSubmitted: (_) {
+              if (!controller.isLoading) {
+                _applyFilters(controller);
+              }
+            },
+          ),
+        ),
+        SizedBox(
+          width: 220,
+          child: DropdownButtonFormField<bool?>(
+            initialValue: _selectedIsActive,
+            decoration: const InputDecoration(
+              labelText: 'Status',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem<bool?>(value: null, child: Text('All')),
+              DropdownMenuItem<bool?>(value: true, child: Text('Active')),
+              DropdownMenuItem<bool?>(value: false, child: Text('Inactive')),
+            ],
+            onChanged: controller.isLoading
+                ? null
+                : (value) {
+                    setState(() {
+                      _selectedIsActive = value;
+                    });
+                  },
+          ),
+        ),
+        SizedBox(
+          width: 220,
+          child: DropdownButtonFormField<bool?>(
+            initialValue: _selectedIsApproved,
+            decoration: const InputDecoration(
+              labelText: 'Approval',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem<bool?>(value: null, child: Text('All')),
+              DropdownMenuItem<bool?>(value: true, child: Text('Approved')),
+              DropdownMenuItem<bool?>(
+                value: false,
+                child: Text('Not approved'),
+              ),
+            ],
+            onChanged: controller.isLoading
+                ? null
+                : (value) {
+                    setState(() {
+                      _selectedIsApproved = value;
+                    });
+                  },
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: controller.isLoading
+              ? null
+              : () => _applyFilters(controller),
+          icon: const Icon(Icons.search),
+          label: const Text('Apply'),
+        ),
+        TextButton.icon(
+          onPressed: controller.isLoading
+              ? null
+              : () => _clearFilters(controller),
+          icon: const Icon(Icons.close),
+          label: const Text('Clear'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _applyFilters(UsersController controller) async {
+    await controller.applyFilters(
+      email: _emailController.text,
+      isActive: _selectedIsActive,
+      isApproved: _selectedIsApproved,
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _clearFilters(UsersController controller) {
+    _emailController.clear();
+
+    setState(() {
+      _selectedIsActive = true;
+      _selectedIsApproved = null;
+    });
+
+    controller.clearFilters();
+  }
+
   Widget _buildContent(
     UsersController controller, {
     required bool canUpdate,
     required bool canDelete,
   }) {
+    if (!controller.hasSearched) {
+      return _buildInitialSearchState();
+    }
+
     if (controller.isLoading && controller.users.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -113,7 +232,7 @@ class _UsersPageState extends State<UsersPage> {
     }
 
     if (controller.users.isEmpty) {
-      return const Center(child: Text('No users found.'));
+      return _buildNoResults();
     }
 
     return Column(
@@ -126,15 +245,22 @@ class _UsersPageState extends State<UsersPage> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('ID')),
-                    DataColumn(label: Text('Email')),
-                    DataColumn(label: Text('Active')),
-                    DataColumn(label: Text('Approved')),
-                    DataColumn(label: Text('Account Active')),
-                    DataColumn(label: Text('Email Verified')),
-                    DataColumn(label: Text('Created')),
-                    DataColumn(label: Text('Actions')),
+                  sortColumnIndex: 6,
+                  sortAscending: controller.sortAscending,
+                  columns: [
+                    const DataColumn(label: Text('ID')),
+                    const DataColumn(label: Text('Email')),
+                    const DataColumn(label: Text('Active')),
+                    const DataColumn(label: Text('Approved')),
+                    const DataColumn(label: Text('Account Active')),
+                    const DataColumn(label: Text('Email Verified')),
+                    DataColumn(
+                      label: const Text('Created'),
+                      onSort: (_, ascending) {
+                        controller.sortByCreatedUtc(ascending);
+                      },
+                    ),
+                    const DataColumn(label: Text('Actions')),
                   ],
                   rows: controller.users
                       .map(
@@ -153,6 +279,48 @@ class _UsersPageState extends State<UsersPage> {
         const SizedBox(height: 16),
         _buildPagination(controller),
       ],
+    );
+  }
+
+  Widget _buildInitialSearchState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.manage_search, size: 56, color: Colors.grey.shade500),
+          const SizedBox(height: 16),
+          const Text(
+            'Search for users',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Select your search criteria and click Apply.',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResults() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off, size: 56, color: Colors.grey.shade500),
+          const SizedBox(height: 16),
+          const Text(
+            'No users found.',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Try changing your search criteria.',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -176,7 +344,7 @@ class _UsersPageState extends State<UsersPage> {
           _StatusIndicator(
             value: user.isApproved,
             trueLabel: 'Approved',
-            falseLabel: 'Pending',
+            falseLabel: 'Not approved',
           ),
         ),
         DataCell(
@@ -223,6 +391,74 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
+  Widget _buildPagination(UsersController controller) {
+    return Row(
+      children: [
+        Text(
+          '${controller.totalCount} '
+          '${controller.totalCount == 1 ? 'record' : 'records'}',
+        ),
+        const Spacer(),
+        const Text('Rows per page:'),
+        const SizedBox(width: 8),
+        DropdownButton<int>(
+          value: controller.pageSize,
+          items: UsersController.allowedPageSizes
+              .map(
+                (pageSize) => DropdownMenuItem<int>(
+                  value: pageSize,
+                  child: Text(pageSize.toString()),
+                ),
+              )
+              .toList(),
+          onChanged: controller.isLoading
+              ? null
+              : (value) {
+                  if (value != null) {
+                    controller.changePageSize(value);
+                  }
+                },
+        ),
+        if (controller.totalPages > 1) ...[
+          const SizedBox(width: 24),
+          Text(
+            'Page ${controller.pageNumber} '
+            'of ${controller.totalPages}',
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'First page',
+            onPressed: controller.hasPreviousPage && !controller.isLoading
+                ? controller.firstPage
+                : null,
+            icon: const Icon(Icons.first_page),
+          ),
+          IconButton(
+            tooltip: 'Previous page',
+            onPressed: controller.hasPreviousPage && !controller.isLoading
+                ? controller.previousPage
+                : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          IconButton(
+            tooltip: 'Next page',
+            onPressed: controller.hasNextPage && !controller.isLoading
+                ? controller.nextPage
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+          IconButton(
+            tooltip: 'Last page',
+            onPressed: controller.hasNextPage && !controller.isLoading
+                ? controller.lastPage
+                : null,
+            icon: const Icon(Icons.last_page),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildError(UsersController controller) {
     return Center(
       child: Column(
@@ -241,46 +477,12 @@ class _UsersPageState extends State<UsersPage> {
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: controller.loadUsers,
+            onPressed: controller.isLoading ? null : controller.refresh,
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPagination(UsersController controller) {
-    final firstItem = controller.totalCount == 0
-        ? 0
-        : ((controller.pageNumber - 1) * controller.pageSize) + 1;
-
-    final calculatedLastItem = controller.pageNumber * controller.pageSize;
-
-    final lastItem = calculatedLastItem > controller.totalCount
-        ? controller.totalCount
-        : calculatedLastItem;
-
-    return Row(
-      children: [
-        Text('$firstItem-$lastItem of ${controller.totalCount}'),
-        const Spacer(),
-        IconButton(
-          tooltip: 'Previous page',
-          onPressed: controller.hasPreviousPage && !controller.isLoading
-              ? controller.previousPage
-              : null,
-          icon: const Icon(Icons.chevron_left),
-        ),
-        Text('Page ${controller.pageNumber}'),
-        IconButton(
-          tooltip: 'Next page',
-          onPressed: controller.hasNextPage && !controller.isLoading
-              ? controller.nextPage
-              : null,
-          icon: const Icon(Icons.chevron_right),
-        ),
-      ],
     );
   }
 
