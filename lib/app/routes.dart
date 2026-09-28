@@ -17,12 +17,14 @@ import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
 import '../features/users/pages/users_page.dart';
 import '../features/user_groups/pages/user_groups_page.dart';
+import '../features/identity/pages/accept_invitation_page.dart';
 
 class AppRoutes {
   static const String startup = '/';
   static const String introduction = '/welcome';
   static const String login = '/login';
   static const String signup = '/signup';
+  static const String acceptInvitation = '/accept-invitation';
 
   static const String home = '/home';
 
@@ -39,7 +41,10 @@ class AppRoutes {
   static const String service = '/service';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
+    final routeName = settings.name ?? startup;
+    final uri = Uri.parse(routeName);
+
+    switch (uri.path) {
       case startup:
         return MaterialPageRoute(
           builder: (_) => const StartupPage(),
@@ -64,6 +69,13 @@ class AppRoutes {
           settings: settings,
         );
 
+      case acceptInvitation:
+        final token = uri.queryParameters['token'] ?? '';
+
+        return MaterialPageRoute(
+          builder: (_) => AcceptInvitationPage(token: token),
+          settings: settings,
+        );
       case home:
         return _protectedRoute(settings, const HomePage());
 

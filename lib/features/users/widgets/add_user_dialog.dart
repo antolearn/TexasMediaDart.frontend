@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/users_controller.dart';
-import '../models/organization_user.dart';
+import '../models/create_user_result.dart';
 import '../../../core/network/api_exception.dart';
 
 class AddUserDialog extends StatefulWidget {
@@ -40,13 +40,13 @@ class _AddUserDialogState extends State<AddUserDialog> {
     });
 
     try {
-      final user = await controller.addUser(_emailController.text);
+      final result = await controller.addUser(_emailController.text);
 
       if (!mounted) {
         return;
       }
 
-      Navigator.of(context).pop<OrganizationUser>(user);
+      Navigator.of(context).pop<CreateUserResult>(result);
     } catch (exception) {
       if (!mounted) {
         return;
@@ -87,7 +87,9 @@ class _AddUserDialogState extends State<AddUserDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Enter the email address of an existing TexasDart user.',
+                'Enter the email address of the user you want to add. '
+                'If they do not have a TexasDart account, an invitation '
+                'will be created.',
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -103,8 +105,16 @@ class _AddUserDialogState extends State<AddUserDialog> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final email = value?.trim() ?? '';
+
+                  if (email.isEmpty) {
                     return 'Email is required.';
+                  }
+
+                  final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+                  if (!emailPattern.hasMatch(email)) {
+                    return 'Enter a valid email address.';
                   }
 
                   return null;

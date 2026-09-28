@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../organization/controllers/module_permissions_controller.dart';
 import '../controllers/users_controller.dart';
+import '../models/create_user_result.dart';
 import '../models/organization_user.dart';
 import '../widgets/add_user_dialog.dart';
 
@@ -181,23 +182,35 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   Future<void> _showAddUserDialog() async {
-    final user = await showDialog<OrganizationUser>(
+    final result = await showDialog<CreateUserResult>(
       context: context,
       barrierDismissible: false,
       builder: (_) => const AddUserDialog(),
     );
 
-    if (!mounted || user == null) {
+    if (!mounted || result == null) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'User ${user.email ?? user.identityUserId} added successfully.',
-        ),
-      ),
-    );
+    String message;
+
+    if (result.wasAdded) {
+      final email =
+          result.user?.email ??
+          result.user?.identityUserId.toString() ??
+          'User';
+
+      message = '$email added successfully.';
+    } else if (result.wasInvited) {
+      final email = result.invitation?.email ?? 'User';
+
+      message = 'Invitation created for $email.';
+    } else {
+      message = 'User request completed successfully.';
+    }
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _applyFilters(UsersController controller) async {
