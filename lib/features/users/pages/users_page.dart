@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../organization/controllers/module_permissions_controller.dart';
 import '../controllers/users_controller.dart';
 import '../models/organization_user.dart';
+import '../widgets/add_user_dialog.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -32,7 +33,7 @@ class _UsersPageState extends State<UsersPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(context, controller, canCreate: canCreate),
+          _buildHeader(controller, canCreate: canCreate),
           const SizedBox(height: 20),
           _buildFilters(controller),
           const SizedBox(height: 20),
@@ -48,11 +49,7 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    UsersController controller, {
-    required bool canCreate,
-  }) {
+  Widget _buildHeader(UsersController controller, {required bool canCreate}) {
     return Row(
       children: [
         const Expanded(
@@ -81,13 +78,7 @@ class _UsersPageState extends State<UsersPage> {
         const SizedBox(width: 8),
         if (canCreate)
           FilledButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Add User will be implemented next.'),
-                ),
-              );
-            },
+            onPressed: controller.isAddingUser ? null : _showAddUserDialog,
             icon: const Icon(Icons.person_add),
             label: const Text('Add User'),
           ),
@@ -186,6 +177,26 @@ class _UsersPageState extends State<UsersPage> {
           label: const Text('Clear'),
         ),
       ],
+    );
+  }
+
+  Future<void> _showAddUserDialog() async {
+    final user = await showDialog<OrganizationUser>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AddUserDialog(),
+    );
+
+    if (!mounted || user == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'User ${user.email ?? user.identityUserId} added successfully.',
+        ),
+      ),
     );
   }
 

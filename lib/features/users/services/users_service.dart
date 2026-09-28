@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../models/organization_user.dart';
 import '../models/organization_user_search_result.dart';
 
 class UsersService {
@@ -52,5 +53,25 @@ class UsersService {
     }
 
     return OrganizationUserSearchResult.fromJson(response);
+  }
+
+  Future<OrganizationUser> addUser(String email) async {
+    final trimmedEmail = email.trim();
+
+    if (trimmedEmail.isEmpty) {
+      throw ApiException(message: 'Email is required.');
+    }
+
+    final response = await _apiClient.post(
+      '/api/users',
+      authenticated: true,
+      body: {'email': trimmedEmail},
+    );
+
+    if (response is! Map<String, dynamic>) {
+      throw ApiException(message: 'Invalid add user response.');
+    }
+
+    return OrganizationUser.fromJson(response);
   }
 }
