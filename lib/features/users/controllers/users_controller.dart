@@ -12,6 +12,7 @@ class UsersController extends ChangeNotifier {
 
   bool _isLoading = false;
   bool _hasSearched = false;
+  bool _isAddingUser = false;
 
   String? _errorMessage;
 
@@ -29,6 +30,7 @@ class UsersController extends ChangeNotifier {
   bool _sortAscending = false;
 
   bool get isLoading => _isLoading;
+  bool get isAddingUser => _isAddingUser;
 
   bool get hasSearched => _hasSearched;
 
@@ -201,6 +203,34 @@ class UsersController extends ChangeNotifier {
     }
 
     await _loadPage(lastPageNumber);
+  }
+
+  Future<OrganizationUser> addUser(String email) async {
+    final trimmedEmail = email.trim();
+
+    if (trimmedEmail.isEmpty) {
+      throw ArgumentError('Email is required.');
+    }
+
+    if (_isAddingUser) {
+      throw StateError('A user is already being added.');
+    }
+
+    _isAddingUser = true;
+    notifyListeners();
+
+    try {
+      final user = await _usersService.addUser(trimmedEmail);
+
+      if (_hasSearched) {
+        await _loadPage(1);
+      }
+
+      return user;
+    } finally {
+      _isAddingUser = false;
+      notifyListeners();
+    }
   }
 
   Future<void> refresh() async {
