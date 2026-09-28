@@ -1,6 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
-import '../models/organization_user.dart';
+import '../models/create_user_result.dart';
 import '../models/organization_user_search_result.dart';
 
 class UsersService {
@@ -55,7 +55,7 @@ class UsersService {
     return OrganizationUserSearchResult.fromJson(response);
   }
 
-  Future<OrganizationUser> addUser(String email) async {
+  Future<CreateUserResult> addUser(String email) async {
     final trimmedEmail = email.trim();
 
     if (trimmedEmail.isEmpty) {
@@ -72,6 +72,6 @@ class UsersService {
       throw ApiException(message: 'Invalid add user response.');
     }
 
-    return OrganizationUser.fromJson(response);
+    return CreateUserResult.fromJson(response);
   }
 }

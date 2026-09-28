@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/organization_user.dart';
 import '../services/users_service.dart';
+import '../models/create_user_result.dart';
 
 class UsersController extends ChangeNotifier {
   UsersController(this._usersService);
@@ -205,7 +206,7 @@ class UsersController extends ChangeNotifier {
     await _loadPage(lastPageNumber);
   }
 
-  Future<OrganizationUser> addUser(String email) async {
+  Future<CreateUserResult> addUser(String email) async {
     final trimmedEmail = email.trim();
 
     if (trimmedEmail.isEmpty) {
@@ -220,13 +221,13 @@ class UsersController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await _usersService.addUser(trimmedEmail);
+      final result = await _usersService.addUser(trimmedEmail);
 
       if (_hasSearched) {
         await _loadPage(1);
       }
 
-      return user;
+      return result;
     } finally {
       _isAddingUser = false;
       notifyListeners();

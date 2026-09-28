@@ -22,7 +22,7 @@ import '../features/users/controllers/users_controller.dart';
 import '../features/users/services/users_service.dart';
 import '../features/user_groups/controllers/user_groups_controller.dart';
 import '../features/user_groups/services/user_groups_service.dart';
-
+import '../features/identity/services/user_invitation_service.dart';
 import 'routes.dart';
 
 class TexasMediaDartApp extends StatelessWidget {
@@ -104,6 +104,11 @@ class TexasMediaDartApp extends StatelessWidget {
           ),
         ),
 
+        Provider<UserInvitationService>(
+          create: (context) =>
+              UserInvitationService(context.read<MainApiClient>().client),
+        ),
+
         Provider<OrganizationService>(
           create: (context) =>
               OrganizationService(context.read<OrganizationApiClient>().client),
@@ -165,7 +170,6 @@ class TexasMediaDartApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'TexasMediaDart',
-        initialRoute: AppRoutes.startup,
         onGenerateRoute: AppRoutes.generateRoute,
       ),
     );
