@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../models/create_user_result.dart';
 import '../models/organization_user_search_result.dart';
+import '../models/pending_user_invitation.dart';
 
 class UsersService {
   UsersService(this._apiClient);
@@ -73,5 +74,38 @@ class UsersService {
     }
 
     return CreateUserResult.fromJson(response);
+  }
+
+  Future<List<PendingUserInvitation>> getPendingInvitations() async {
+    final response = await _apiClient.get(
+      '/api/user-invitations/pending',
+      authenticated: true,
+    );
+
+    if (response is! List) {
+      throw ApiException(message: 'Invalid pending invitations response.');
+    }
+
+    return response.map((item) {
+      if (item is! Map<String, dynamic>) {
+        throw ApiException(message: 'Invalid pending invitation response.');
+      }
+
+      return PendingUserInvitation.fromJson(item);
+    }).toList();
+  }
+
+  Future<void> resendInvitation(String invitationId) async {
+    final trimmedInvitationId = invitationId.trim();
+
+    if (trimmedInvitationId.isEmpty) {
+      throw ApiException(message: 'Invitation id is required.');
+    }
+
+    await _apiClient.post(
+      '/api/user-invitations/'
+      '${Uri.encodeComponent(trimmedInvitationId)}/resend',
+      authenticated: true,
+    );
   }
 }

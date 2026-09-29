@@ -5,6 +5,7 @@ import '../../organization/controllers/module_permissions_controller.dart';
 import '../controllers/users_controller.dart';
 import '../models/create_user_result.dart';
 import '../models/organization_user.dart';
+import '../models/pending_user_invitation.dart';
 import '../widgets/add_user_dialog.dart';
 
 class UsersPage extends StatefulWidget {
@@ -19,6 +20,19 @@ class _UsersPageState extends State<UsersPage> {
 
   bool? _selectedIsActive = true;
   bool? _selectedIsApproved;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      context.read<UsersController>().loadPendingInvitations();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +91,24 @@ class _UsersPageState extends State<UsersPage> {
           icon: const Icon(Icons.refresh),
         ),
         const SizedBox(width: 8),
+        if (canCreate)
+          OutlinedButton.icon(
+            onPressed: controller.isLoadingPendingInvitations
+                ? null
+                : () => _showPendingInvitationsDialog(controller),
+            icon: controller.isLoadingPendingInvitations
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.mark_email_unread_outlined),
+            label: Text(
+              'Pending Invitations '
+              '(${controller.pendingInvitations.length})',
+            ),
+          ),
+        if (canCreate) const SizedBox(width: 8),
         if (canCreate)
           FilledButton.icon(
             onPressed: controller.isAddingUser ? null : _showAddUserDialog,
@@ -213,18 +245,193 @@ class _UsersPageState extends State<UsersPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _showPendingInvitationsDialog(UsersController controller) async {
+    await controller.loadPendingInvitations();
+
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Consumer<UsersController>(
+          builder: (context, controller, _) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const Expanded(child: Text('Pending Invitations')),
+                  IconButton(
+                    tooltip: 'Refresh',
+                    onPressed: controller.isLoadingPendingInvitations
+                        ? null
+                        : controller.loadPendingInvitations,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 850,
+                child: _buildPendingInvitationsContent(controller),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPendingInvitationsContent(UsersController controller) {
+    if (controller.isLoadingPendingInvitations &&
+        controller.pendingInvitations.isEmpty) {
+      return const SizedBox(
+        height: 160,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (controller.hasPendingInvitationsError) {
+      return SizedBox(
+        height: 180,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 40, color: Colors.red),
+              const SizedBox(height: 12),
+              Text(
+                controller.pendingInvitationsErrorMessage ??
+                    'Unable to load pending invitations.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: controller.isLoadingPendingInvitations
+                    ? null
+                    : controller.loadPendingInvitations,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (controller.pendingInvitations.isEmpty) {
+      return const SizedBox(
+        height: 160,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.mark_email_read_outlined,
+                size: 44,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'No pending invitations.',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Email')),
+            DataColumn(label: Text('Invited')),
+            DataColumn(label: Text('Expires')),
+            DataColumn(label: Text('Actions')),
+          ],
+          rows: controller.pendingInvitations.map((invitation) {
+            final isResending =
+                controller.resendingInvitationId == invitation.invitationId;
+
+            return DataRow(
+              cells: [
+                DataCell(Text(invitation.email)),
+                DataCell(Text(_formatDateTime(invitation.createdUtc))),
+                DataCell(Text(_formatDateTime(invitation.expiresUtc))),
+                DataCell(
+                  FilledButton.tonalIcon(
+                    onPressed: controller.resendingInvitationId != null
+                        ? null
+                        : () => _resendInvitation(controller, invitation),
+                    icon: isResending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined, size: 18),
+                    label: Text(isResending ? 'Sending...' : 'Resend'),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _resendInvitation(
+    UsersController controller,
+    PendingUserInvitation invitation,
+  ) async {
+    try {
+      await controller.resendInvitation(invitation);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Invitation resent to '
+            '${invitation.email}.',
+          ),
+        ),
+      );
+    } catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to resend invitation: '
+            '$exception',
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _applyFilters(UsersController controller) async {
     await controller.applyFilters(
       email: _emailController.text,
       isActive: _selectedIsActive,
       isApproved: _selectedIsApproved,
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
   }
 
   void _clearFilters(UsersController controller) {
@@ -319,7 +526,8 @@ class _UsersPageState extends State<UsersPage> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Select your search criteria and click Apply.',
+            'Select your search criteria and '
+            'click Apply.',
             style: TextStyle(color: Colors.grey),
           ),
         ],
@@ -520,6 +728,12 @@ class _UsersPageState extends State<UsersPage> {
         '${twoDigits(local.day)} '
         '${twoDigits(local.hour)}:'
         '${twoDigits(local.minute)}';
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
   }
 }
 

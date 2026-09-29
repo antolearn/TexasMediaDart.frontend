@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/organization_user.dart';
-import '../services/users_service.dart';
 import '../models/create_user_result.dart';
+import '../models/organization_user.dart';
+import '../models/pending_user_invitation.dart';
+import '../services/users_service.dart';
 
 class UsersController extends ChangeNotifier {
   UsersController(this._usersService);
@@ -14,10 +15,14 @@ class UsersController extends ChangeNotifier {
   bool _isLoading = false;
   bool _hasSearched = false;
   bool _isAddingUser = false;
+  bool _isLoadingPendingInvitations = false;
 
+  String? _resendingInvitationId;
   String? _errorMessage;
+  String? _pendingInvitationsErrorMessage;
 
   List<OrganizationUser> _users = [];
+  List<PendingUserInvitation> _pendingInvitations = [];
 
   int _pageNumber = 1;
   int _pageSize = 25;
@@ -31,7 +36,12 @@ class UsersController extends ChangeNotifier {
   bool _sortAscending = false;
 
   bool get isLoading => _isLoading;
+
   bool get isAddingUser => _isAddingUser;
+
+  bool get isLoadingPendingInvitations => _isLoadingPendingInvitations;
+
+  String? get resendingInvitationId => _resendingInvitationId;
 
   bool get hasSearched => _hasSearched;
 
@@ -39,7 +49,15 @@ class UsersController extends ChangeNotifier {
 
   bool get hasError => _errorMessage != null;
 
+  String? get pendingInvitationsErrorMessage => _pendingInvitationsErrorMessage;
+
+  bool get hasPendingInvitationsError =>
+      _pendingInvitationsErrorMessage != null;
+
   List<OrganizationUser> get users => List.unmodifiable(_users);
+
+  List<PendingUserInvitation> get pendingInvitations =>
+      List.unmodifiable(_pendingInvitations);
 
   int get pageNumber => _pageNumber;
 
@@ -227,9 +245,59 @@ class UsersController extends ChangeNotifier {
         await _loadPage(1);
       }
 
+      // If the request created an invitation rather
+      // than immediately adding an existing user,
+      // refresh the pending invitation collection.
+      await loadPendingInvitations();
+
       return result;
     } finally {
       _isAddingUser = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPendingInvitations() async {
+    if (_isLoadingPendingInvitations) {
+      return;
+    }
+
+    _isLoadingPendingInvitations = true;
+    _pendingInvitationsErrorMessage = null;
+
+    notifyListeners();
+
+    try {
+      _pendingInvitations = await _usersService.getPendingInvitations();
+    } catch (exception) {
+      _pendingInvitations = [];
+      _pendingInvitationsErrorMessage = exception.toString();
+    } finally {
+      _isLoadingPendingInvitations = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resendInvitation(PendingUserInvitation invitation) async {
+    if (_resendingInvitationId != null) {
+      return;
+    }
+
+    _resendingInvitationId = invitation.invitationId;
+
+    _pendingInvitationsErrorMessage = null;
+
+    notifyListeners();
+
+    try {
+      await _usersService.resendInvitation(invitation.invitationId);
+
+      // The backend rotates the invitation token and
+      // extends the expiration time. Reload so the
+      // server remains the source of truth.
+      await loadPendingInvitations();
+    } finally {
+      _resendingInvitationId = null;
       notifyListeners();
     }
   }

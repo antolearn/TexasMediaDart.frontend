@@ -24,6 +24,38 @@ class _StartupPageState extends State<StartupPage> {
   }
 
   Future<void> _checkStartupState() async {
+    //
+    // Handle public invitation deep links before authentication routing.
+    //
+    final uri = Uri.base;
+    final fragment = uri.fragment;
+
+    if (fragment.isNotEmpty) {
+      final invitationUri = Uri.tryParse(
+        fragment.startsWith('/') ? fragment : '/$fragment',
+      );
+
+      if (invitationUri?.path == AppRoutes.acceptInvitation) {
+        final token = invitationUri?.queryParameters['token'];
+
+        if (token != null && token.isNotEmpty) {
+          if (!mounted) {
+            return;
+          }
+
+          Navigator.of(context).pushReplacementNamed(
+            '${AppRoutes.acceptInvitation}'
+            '?token=${Uri.encodeQueryComponent(token)}',
+          );
+
+          return;
+        }
+      }
+    }
+
+    //
+    // Normal application startup.
+    //
     final authService = context.read<AuthService>();
     final organizationService = context.read<OrganizationService>();
     final permissionsController = context.read<ModulePermissionsController>();
@@ -35,6 +67,9 @@ class _StartupPageState extends State<StartupPage> {
         return;
       }
 
+      //
+      // User is not authenticated.
+      //
       if (!isLoggedIn) {
         permissionsController.clear();
 
@@ -87,7 +122,7 @@ class _StartupPageState extends State<StartupPage> {
       //
 
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-    } catch (_) {
+    } catch (exception) {
       if (!mounted) {
         return;
       }
