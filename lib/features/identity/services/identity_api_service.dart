@@ -3,6 +3,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 
 import '../models/auth_tokens.dart';
+import '../models/current_terms.dart';
 import '../models/register_response.dart';
 import '../models/user_profile.dart';
 
@@ -13,10 +14,29 @@ class IdentityApiService {
 
   final ApiClient _apiClient;
 
+  Future<CurrentTerms> getCurrentTerms() async {
+    try {
+      final response = await _apiClient.get('/api/terms/current');
+
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message:
+              'Unexpected response format from Terms and Conditions endpoint.',
+        );
+      }
+
+      return CurrentTerms.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
+  }
+
   Future<RegisterResponse> register({
     required String email,
     required String password,
     required String confirmPassword,
+    required bool acceptTerms,
   }) async {
     try {
       final response = await _apiClient.post(
@@ -25,6 +45,7 @@ class IdentityApiService {
           'email': email,
           'password': password,
           'confirmPassword': confirmPassword,
+          'acceptTerms': acceptTerms,
         },
       );
 
