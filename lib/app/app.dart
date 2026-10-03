@@ -28,6 +28,39 @@ import 'routes.dart';
 class TexasMediaDartApp extends StatelessWidget {
   const TexasMediaDartApp({super.key});
 
+  String _getInitialRoute() {
+    final fragment = Uri.base.fragment;
+
+    if (fragment.isEmpty) {
+      return AppRoutes.startup;
+    }
+
+    final route = fragment.startsWith('/') ? fragment : '/$fragment';
+
+    final uri = Uri.tryParse(route);
+
+    if (uri == null) {
+      return AppRoutes.startup;
+    }
+
+    //
+    // Public deep links must bypass StartupPage.
+    //
+    // This allows invitation and email-verification links to be
+    // handled directly by AppRoutes.generateRoute().
+    //
+    if (uri.path == AppRoutes.acceptInvitation ||
+        uri.path == AppRoutes.verifyEmail) {
+      return route;
+    }
+
+    //
+    // All normal application navigation begins at StartupPage,
+    // where authentication and organization state are evaluated.
+    //
+    return AppRoutes.startup;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -119,9 +152,11 @@ class TexasMediaDartApp extends StatelessWidget {
               ModulePermissionsController(context.read<OrganizationService>()),
         ),
 
+        //
         // Generic table preference storage.
         // Roles is the first consumer, but this can later be reused
         // by Users, Contacts, and other searchable tables.
+        //
         Provider<TablePreferenceService>(
           create: (_) => TablePreferenceService(),
         ),
@@ -137,6 +172,7 @@ class TexasMediaDartApp extends StatelessWidget {
             context.read<TablePreferenceService>(),
           )..loadPreferences(),
         ),
+
         Provider<UserGroupsService>(
           create: (context) =>
               UserGroupsService(context.read<OrganizationApiClient>().client),
@@ -170,6 +206,7 @@ class TexasMediaDartApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'TexasMediaDart',
+        initialRoute: _getInitialRoute(),
         onGenerateRoute: AppRoutes.generateRoute,
       ),
     );
