@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/routes.dart';
 import '../services/identity_api_service.dart';
 
 class VerifyEmailPage extends StatefulWidget {
@@ -16,19 +17,55 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
   bool _isVerifying = true;
   bool _isVerified = false;
+  bool _verificationStarted = false;
+
   String? _message;
 
   @override
   void initState() {
     super.initState();
 
+    debugPrint(
+      'VERIFY EMAIL PAGE initState '
+      'instance=${identityHashCode(this)}',
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      debugPrint(
+        'VERIFY EMAIL PAGE postFrameCallback '
+        'instance=${identityHashCode(this)}',
+      );
+
       _verifyEmail();
     });
   }
 
   Future<void> _verifyEmail() async {
+    //
+    // Protect this page instance from submitting the same
+    // verification token more than once.
+    //
+    if (_verificationStarted) {
+      debugPrint(
+        'VERIFY EMAIL duplicate call prevented '
+        'instance=${identityHashCode(this)}',
+      );
+
+      return;
+    }
+
+    _verificationStarted = true;
+
     final token = widget.token.trim();
+
+    debugPrint(
+      'VERIFY EMAIL API CALL '
+      'instance=${identityHashCode(this)}',
+    );
 
     if (token.isEmpty) {
       if (!mounted) {
@@ -47,6 +84,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     try {
       final result = await _identityApiService.verifyEmail(token: token);
 
+      debugPrint(
+        'VERIFY EMAIL API SUCCESS '
+        'instance=${identityHashCode(this)} '
+        'isEmailVerified=${result.isEmailVerified}',
+      );
+
       if (!mounted) {
         return;
       }
@@ -60,6 +103,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
             : 'Unable to verify your email address.';
       });
     } on IdentityApiException catch (ex) {
+      debugPrint(
+        'VERIFY EMAIL API ERROR '
+        'instance=${identityHashCode(this)} '
+        'message=${ex.message}',
+      );
+
       if (!mounted) {
         return;
       }
@@ -69,7 +118,13 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
         _isVerified = false;
         _message = ex.message;
       });
-    } catch (_) {
+    } catch (exception) {
+      debugPrint(
+        'VERIFY EMAIL UNEXPECTED ERROR '
+        'instance=${identityHashCode(this)} '
+        'error=$exception',
+      );
+
       if (!mounted) {
         return;
       }
@@ -83,12 +138,18 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   void _goToLogin() {
-    Navigator.of(context).pushReplacementNamed('/login');
+    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
   }
 
   @override
   void dispose() {
+    debugPrint(
+      'VERIFY EMAIL PAGE dispose '
+      'instance=${identityHashCode(this)}',
+    );
+
     _identityApiService.dispose();
+
     super.dispose();
   }
 
