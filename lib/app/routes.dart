@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../features/home/pages/home_page.dart';
+import '../features/identity/pages/accept_invitation_page.dart';
 import '../features/identity/pages/auth_guard.dart';
 import '../features/identity/pages/login_page.dart';
 import '../features/identity/pages/register_page.dart';
 import '../features/identity/pages/startup_page.dart';
+import '../features/identity/pages/verify_email_page.dart';
 import '../features/landing/pages/introduction_page.dart';
-import '../features/organization/pages/module_guard.dart';
 import '../features/organization/models/current_organization.dart';
-import '../features/organization/pages/organization_setup_page.dart';
-import '../features/organization/pages/organization_page.dart';
+import '../features/organization/pages/module_guard.dart';
 import '../features/organization/pages/organization_deactivated_page.dart';
+import '../features/organization/pages/organization_page.dart';
+import '../features/organization/pages/organization_setup_page.dart';
 import '../features/roles/pages/roles_page.dart';
 import '../features/service_status/pages/service_health_page.dart';
+import '../features/user_groups/pages/user_groups_page.dart';
+import '../features/users/pages/users_page.dart';
 import '../shared/layouts/main_layout.dart';
 import '../shared/pages/module_placeholder_page.dart';
-import '../features/users/pages/users_page.dart';
-import '../features/user_groups/pages/user_groups_page.dart';
-import '../features/identity/pages/accept_invitation_page.dart';
 
 class AppRoutes {
   static const String startup = '/';
@@ -25,11 +26,12 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String acceptInvitation = '/accept-invitation';
+  static const String verifyEmail = '/verify-email';
 
   static const String home = '/home';
 
   static const String organization = '/organization';
-  static const organizationDeactivated = '/organization-deactivated';
+  static const String organizationDeactivated = '/organization-deactivated';
   static const String users = '/users';
   static const String userGroups = '/user-groups';
   static const String roles = '/roles';
@@ -76,6 +78,15 @@ class AppRoutes {
           builder: (_) => AcceptInvitationPage(token: token),
           settings: settings,
         );
+
+      case verifyEmail:
+        final token = uri.queryParameters['token'] ?? '';
+
+        return MaterialPageRoute(
+          builder: (_) => VerifyEmailPage(token: token),
+          settings: settings,
+        );
+
       case home:
         return _protectedRoute(settings, const HomePage());
 
@@ -96,6 +107,7 @@ class AppRoutes {
               OrganizationDeactivatedPage(organization: organization),
           settings: settings,
         );
+
       case users:
         return _moduleRoute(
           settings,

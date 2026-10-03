@@ -25,32 +25,12 @@ class _StartupPageState extends State<StartupPage> {
 
   Future<void> _checkStartupState() async {
     //
-    // Handle public invitation deep links before authentication routing.
+    // Handle public deep links before authentication routing.
     //
-    final uri = Uri.base;
-    final fragment = uri.fragment;
+    final deepLinkHandled = _handlePublicDeepLink();
 
-    if (fragment.isNotEmpty) {
-      final invitationUri = Uri.tryParse(
-        fragment.startsWith('/') ? fragment : '/$fragment',
-      );
-
-      if (invitationUri?.path == AppRoutes.acceptInvitation) {
-        final token = invitationUri?.queryParameters['token'];
-
-        if (token != null && token.isNotEmpty) {
-          if (!mounted) {
-            return;
-          }
-
-          Navigator.of(context).pushReplacementNamed(
-            '${AppRoutes.acceptInvitation}'
-            '?token=${Uri.encodeQueryComponent(token)}',
-          );
-
-          return;
-        }
-      }
+    if (deepLinkHandled) {
+      return;
     }
 
     //
@@ -131,6 +111,55 @@ class _StartupPageState extends State<StartupPage> {
 
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     }
+  }
+
+  bool _handlePublicDeepLink() {
+    final uri = Uri.base;
+    final fragment = uri.fragment;
+
+    if (fragment.isEmpty) {
+      return false;
+    }
+
+    final deepLinkUri = Uri.tryParse(
+      fragment.startsWith('/') ? fragment : '/$fragment',
+    );
+
+    if (deepLinkUri == null) {
+      return false;
+    }
+
+    final token = deepLinkUri.queryParameters['token'];
+
+    if (token == null || token.trim().isEmpty) {
+      return false;
+    }
+
+    //
+    // User invitation deep link.
+    //
+    if (deepLinkUri.path == AppRoutes.acceptInvitation) {
+      Navigator.of(context).pushReplacementNamed(
+        '${AppRoutes.acceptInvitation}'
+        '?token=${Uri.encodeQueryComponent(token)}',
+      );
+
+      return true;
+    }
+
+    //
+    // Email verification deep link.
+    //
+    if (deepLinkUri.path == AppRoutes.verifyEmail) {
+      Navigator.of(context).pushReplacementNamed(
+        '${AppRoutes.verifyEmail}'
+        '?token=${Uri.encodeQueryComponent(token)}',
+      );
+
+      return true;
+    }
+
+    return false;
   }
 
   @override

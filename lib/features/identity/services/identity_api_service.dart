@@ -1,6 +1,7 @@
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../models/verify_email_response.dart';
 
 import '../models/auth_tokens.dart';
 import '../models/current_terms.dart';
@@ -100,6 +101,27 @@ class IdentityApiService {
       }
 
       return UserProfile.fromJson(response);
+    } on ApiException catch (ex) {
+      throw _toIdentityApiException(ex);
+    }
+  }
+
+  Future<VerifyEmailResponse> verifyEmail({required String token}) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/auth/verify-email',
+        body: {'token': token},
+      );
+
+      if (response is! Map<String, dynamic>) {
+        throw IdentityApiException(
+          statusCode: null,
+          message:
+              'Unexpected response format from email verification endpoint.',
+        );
+      }
+
+      return VerifyEmailResponse.fromJson(response);
     } on ApiException catch (ex) {
       throw _toIdentityApiException(ex);
     }
