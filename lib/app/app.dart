@@ -29,29 +29,31 @@ class TexasMediaDartApp extends StatelessWidget {
   const TexasMediaDartApp({super.key});
 
   String _getInitialRoute() {
-    final fragment = Uri.base.fragment;
+    final uri = Uri.base;
 
-    if (fragment.isEmpty) {
-      return AppRoutes.startup;
-    }
+    //
+    // With usePathUrlStrategy(), Flutter routes are represented
+    // by normal browser paths instead of URL fragments.
+    //
+    // Examples:
+    //
+    //   /accept-invitation?token=abc
+    //   /verify-email?token=abc
+    //
+    final path = uri.path;
 
-    final route = fragment.startsWith('/') ? fragment : '/$fragment';
-
-    final uri = Uri.tryParse(route);
-
-    if (uri == null) {
+    if (path.isEmpty || path == '/') {
       return AppRoutes.startup;
     }
 
     //
     // Public deep links must bypass StartupPage.
     //
-    // This allows invitation and email-verification links to be
-    // handled directly by AppRoutes.generateRoute().
+    // Preserve the query string because invitation and
+    // email-verification routes require the token.
     //
-    if (uri.path == AppRoutes.acceptInvitation ||
-        uri.path == AppRoutes.verifyEmail) {
-      return route;
+    if (path == AppRoutes.acceptInvitation || path == AppRoutes.verifyEmail) {
+      return uri.hasQuery ? '$path?${uri.query}' : path;
     }
 
     //
